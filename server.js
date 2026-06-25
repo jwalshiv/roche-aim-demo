@@ -38,6 +38,11 @@ RULES:
 - Every headline must have headline_source: "library" if verbatim from a CM headline, or "ai" if you wrote it
 - priority must be one of: lead, support, bridge, close
 - Never invent claims not in the library
+- Maximum 3 items in analysis array
+- Maximum 3 slides in architecture
+- Maximum 2 sentences per slide copy field
+- Maximum 1 item in gaps array
+- Be concise — shorter responses are better
 
 Return ONLY valid JSON, no markdown:
 {
@@ -83,7 +88,7 @@ const server = http.createServer((req, res) => {
 
       // Build system prompt server-side — browser only sends the user query
       const systemPrompt = buildSystemPrompt();
-      const userPrompt = 'Generate a ' + parsed.deliverable + ' for:\n- Buying influence: ' + parsed.audience + '\n- Topic: ' + parsed.topic + '\n- Disease area: ' + parsed.disease + '\n- Values layer: ' + parsed.values + '\n\nAnalyse the full library, select best messages with reasoning, architect a narrative for this audience, draft copy with citations on every sentence and headline, and identify gaps.';
+      const userPrompt = 'Generate a ' + parsed.deliverable + ' for:\n- Buying influence: ' + parsed.audience + '\n- Topic: ' + parsed.topic + '\n- Disease area: ' + parsed.disease + '\n- Values layer: ' + parsed.values + '\n\nSelect the 3 most relevant messages only. Build exactly 3 slides. Keep each slide copy to 2 sentences max. Cite every sentence [CM-XX] or [AI]. Identify 1 gap only.';
 
       const payload = JSON.stringify({
         model: 'claude-sonnet-4-6',
