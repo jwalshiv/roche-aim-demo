@@ -590,6 +590,12 @@ async function runAgent() {
   await new Promise(r => setTimeout(r, 300));
   loadingWrap.remove();
 
+  // Safety: log what we got
+  console.log('Result keys:', Object.keys(result));
+  console.log('Analysis count:', (result.analysis||[]).length);
+  console.log('Slides count:', ((result.architecture||{}).slides||[]).length);
+  console.log('Gaps count:', (result.gaps||[]).length);
+
   // Auto-flag all AI content into candidate pool
   const suggestedTags = [
     audienceEl.value,
@@ -620,7 +626,9 @@ async function runAgent() {
     }
   });
 
-  const priorityMap = {
+  let priorityMap;
+  try {
+  priorityMap = {
     lead: { label: 'Lead message', cls: 'priority-lead' },
     support: { label: 'Support', cls: 'priority-support' },
     bridge: { label: 'Bridge', cls: 'priority-bridge' },
@@ -702,6 +710,11 @@ async function runAgent() {
       gapBlock.appendChild(el);
     });
     outputContent.appendChild(gapBlock);
+  }
+
+  } catch(renderErr) {
+    console.error('Render error:', renderErr);
+    outputContent.innerHTML += '<p style="color:#C0392B;font-size:13px;margin-top:16px;">Display error: ' + renderErr.message + '</p>';
   }
 
   btn.disabled = false;
