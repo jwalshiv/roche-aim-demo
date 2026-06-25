@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIM Framework — Messaging Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #007AC2; --blue-dark: #005A8E; --blue-deeper: #003D6B;
+    --blue-light: #E6F4FB; --blue-mid: #CCE8F6;
+    --warm-dark: #2C2826; --warm-mid: #544F4F; --warm-light: #706B69;
+    --warm-pale: #C2BAB5; --warm-ghost: #F0EDE9;
+    --white: #FFFFFF; --surface: #FAFAF9; --border: #DDD8D4;
+    --green: #1A7A3A; --green-light: #E6F4EB;
+    --red: #B03020; --red-light: #FBEAE7;
+    --amber: #7A5000; --amber-light: #FFFBF0; --amber-border: #F5D99A;
+  }
+  html, body { height: 100%; font-family: 'Inter', -apple-system, sans-serif; background: var(--surface); color: var(--warm-dark); font-size: 15px; line-height: 1.6; }
+
+  /* Header */
+  header { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo-group { display: flex; align-items: center; gap: 16px; }
+  
+  .logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .logo-text .company { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: var(--blue); text-transform: uppercase; }
+  .logo-text .product { font-size: 11px; font-weight: 400; color: var(--warm-light); letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .header-badge { font-size: 11px; font-weight: 500; color: var(--blue); background: var(--blue-light); border: 1px solid var(--blue-mid); padding: 4px 10px; border-radius: 20px; letter-spacing: 0.04em; }
+  .header-tabs { display: flex; align-items: center; gap: 2px; background: var(--warm-ghost); border-radius: 8px; padding: 3px; }
+  .header-tab { font-size: 12px; font-weight: 500; font-family: inherit; color: var(--warm-light); background: transparent; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .header-tab:hover { color: var(--warm-dark); background: rgba(255,255,255,0.6); }
+  .header-tab.active { color: var(--warm-dark); background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .header-tab.active-amber { color: var(--amber); background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .pool-count { font-size: 10px; font-weight: 700; background: var(--amber); color: #fff; border-radius: 10px; padding: 1px 6px; display: none; }
+  .has-pending .pool-count { display: inline; }
+
+  /* Layout */
+  .app-body { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 64px); }
+
+  /* Left panel */
+  .panel-left { background: var(--blue-deeper); padding: 36px 32px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+  .panel-section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+  .panel-intro { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+  .field-select { appearance: none; background: rgba(255,255,255,0.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; padding: 10px 36px 10px 14px; width: 100%; cursor: pointer; transition: border-color 0.15s; }
+  .field-select:focus { outline: none; border-color: rgba(255,255,255,0.4); }
+  .field-select option { background: var(--blue-deeper); color: #fff; }
+  .generate-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; }
+  .generate-btn:hover { background: var(--blue-dark); }
+  .generate-btn:active { transform: scale(0.98); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Right panel */
+  .panel-right { padding: 40px 48px; display: flex; flex-direction: column; gap: 32px; }
+
+  /* Views */
+  .view { display: none; flex-direction: column; gap: 32px; }
+  .view.active { display: flex; }
+
+  /* Empty state */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 40px; gap: 16px; }
+  .empty-state h2 { font-size: 18px; font-weight: 500; color: var(--warm-light); }
+  .empty-state p { font-size: 14px; color: var(--warm-pale); max-width: 340px; line-height: 1.65; }
+
+  /* Output header */
+  .output-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .output-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .output-query { font-size: 20px; font-weight: 500; color: var(--warm-dark); line-height: 1.4; }
+  .output-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .otag { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; border: 1px solid; }
+  .otag-blue { color: var(--blue); background: var(--blue-light); border-color: var(--blue-mid); }
+  .otag-gray { color: var(--warm-mid); background: var(--warm-ghost); border-color: var(--border); }
+
+  /* Steps */
+  .step-block { display: flex; flex-direction: column; gap: 14px; }
+  .step-heading { display: flex; align-items: center; gap: 12px; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-light); border: 1px solid var(--blue-mid); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--blue); flex-shrink: 0; }
+  .step-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm-light); }
+  .arc-note { font-size: 13px; color: var(--warm-light); line-height: 1.65; font-style: italic; padding-left: 36px; }
+
+  /* Cluster cards */
+  .cluster-card { border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; background: var(--white); display: flex; flex-direction: column; gap: 10px; }
+  .cluster-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .cluster-msg-id { font-size: 10px; font-weight: 600; font-family: 'Courier New', monospace; color: var(--blue); background: var(--blue-light); padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+  .cluster-headline { font-size: 15px; font-weight: 600; color: var(--warm-dark); line-height: 1.35; }
+  .cluster-rationale { font-size: 13px; color: var(--warm-mid); line-height: 1.65; }
+  .cluster-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--warm-ghost); }
+  .cluster-priority { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .priority-lead { color: #1A5C2A; background: #E6F4EB; }
+  .priority-support { color: #7A5000; background: #FFF3DB; }
+  .priority-bridge { color: #00587A; background: #E0F3FB; }
+  .priority-close { color: #4A1060; background: #F3E8FB; }
+  .cluster-chip { font-size: 11px; color: var(--warm-light); background: var(--warm-ghost); padding: 2px 8px; border-radius: 20px; }
+
+  /* Slide drafts */
+  .slide-draft { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white); }
+  .slide-tab { display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: var(--warm-ghost); border-bottom: 1px solid var(--border); }
+  .slide-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
+  .slide-tab-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warm-light); flex: 1; }
+  .slide-src-id { font-size: 10px; font-family: 'Courier New', monospace; color: var(--warm-pale); background: var(--white); border: 1px solid var(--border); padding: 1px 6px; border-radius: 3px; }
+  .slide-body { padding: 20px; }
+  .slide-headline-wrap { margin-bottom: 10px; }
+  .slide-headline { font-size: 17px; font-weight: 600; color: var(--warm-dark); line-height: 1.35; display: inline; }
+  .cite-msg { display: inline-block; font-size: 10px; font-family: 'Courier New', monospace; color: var(--blue); background: var(--blue-light); border: 1px solid var(--blue-mid); padding: 0 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; }
+  .cite-ai { display: inline-block; font-size: 10px; font-family: 'Courier New', monospace; color: var(--warm-mid); background: var(--warm-ghost); border: 1px solid var(--border); padding: 0 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; cursor: pointer; transition: background 0.15s; }
+  .cite-ai:hover { background: var(--amber-light); border-color: var(--amber-border); color: var(--amber); }
+  .cite-ai.flagged { background: var(--amber-light); border-color: var(--amber-border); color: var(--amber); }
+  .slide-copy { font-size: 13px; color: var(--warm-mid); line-height: 1.75; }
+  .slide-note { margin-top: 12px; padding: 10px 14px; background: var(--blue-light); border-left: 3px solid var(--blue); border-radius: 0 4px 4px 0; font-size: 12px; color: var(--blue-dark); font-style: italic; }
+
+  /* Gap cards */
+  .gap-card { border: 1px solid var(--amber-border); border-radius: 8px; padding: 16px 18px; background: var(--amber-light); display: flex; gap: 12px; }
+  .gap-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; color: var(--amber); }
+  .gap-title { font-size: 12px; font-weight: 600; color: var(--amber); letter-spacing: 0.04em; margin-bottom: 4px; }
+  .gap-text { font-size: 13px; color: #5A3D00; line-height: 1.6; }
+
+  /* Loading */
+  .loading-wrap { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
+  .thinking-step { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--warm-pale); opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.4s; }
+  .thinking-step.visible { opacity: 1; transform: translateY(0); }
+  .thinking-step.done { color: var(--warm-light); }
+  .thinking-step.active { color: var(--blue); }
+  .thinking-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warm-pale); flex-shrink: 0; transition: background 0.3s; }
+  .thinking-step.done .thinking-dot { background: #3A9B5C; }
+  .thinking-step.active .thinking-dot { background: var(--blue); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  /* Citation key */
+  .cite-key { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: var(--warm-ghost); border-radius: 6px; font-size: 11px; color: var(--warm-light); }
+  .cite-key-item { display: flex; align-items: center; gap: 6px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* ── Candidate pool view ── */
+  .pool-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .pool-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .pool-title { font-size: 20px; font-weight: 500; color: var(--warm-dark); }
+  .pool-subtitle { font-size: 13px; color: var(--warm-light); margin-top: 4px; line-height: 1.5; }
+  .pool-stats { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .pool-stat { font-size: 12px; color: var(--warm-light); display: flex; align-items: center; gap: 6px; }
+  .pool-stat strong { color: var(--warm-dark); font-weight: 600; }
+
+  .pool-empty { text-align: center; padding: 60px 40px; color: var(--warm-pale); }
+  .pool-empty p { font-size: 14px; margin-top: 8px; }
+
+  .candidate-card { border: 1px solid var(--border); border-radius: 8px; background: var(--white); overflow: hidden; transition: border-color 0.2s; }
+  .candidate-card.approved { border-color: #A8D5B5; background: #F6FBF8; }
+  .candidate-card.rejected { border-color: #E8C0BA; background: #FDF5F4; opacity: 0.6; }
+
+  .candidate-top { padding: 16px 18px 14px; }
+  .candidate-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .candidate-type { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .type-headline { color: #4A1060; background: #F3E8FB; }
+  .type-copy { color: #00587A; background: #E0F3FB; }
+  .candidate-context { font-size: 11px; color: var(--warm-pale); }
+  .candidate-text { font-size: 14px; font-weight: 500; color: var(--warm-dark); line-height: 1.5; }
+  .candidate-support { font-size: 12px; color: var(--warm-light); margin-top: 6px; line-height: 1.55; }
+
+  .candidate-bottom { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--surface); border-top: 1px solid var(--border); gap: 12px; flex-wrap: wrap; }
+  .candidate-tags-wrap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .candidate-tag-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warm-pale); }
+  .candidate-tag { font-size: 11px; color: var(--warm-light); background: var(--warm-ghost); border: 1px solid var(--border); padding: 2px 8px; border-radius: 20px; }
+  .candidate-tag-input { font-size: 11px; font-family: inherit; color: var(--warm-dark); background: var(--white); border: 1px solid var(--border); padding: 3px 8px; border-radius: 20px; outline: none; width: 140px; }
+  .candidate-tag-input:focus { border-color: var(--blue); }
+
+  .candidate-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .action-btn { font-size: 12px; font-weight: 600; font-family: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid; cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em; }
+  .approve-btn { color: var(--green); background: var(--green-light); border-color: #A8D5B5; }
+  .approve-btn:hover { background: #C8EDD5; }
+  .reject-btn { color: var(--red); background: var(--red-light); border-color: #E8C0BA; }
+  .reject-btn:hover { background: #F5D5D0; }
+  .approved-badge { font-size: 11px; font-weight: 600; color: var(--green); background: var(--green-light); border: 1px solid #A8D5B5; padding: 4px 10px; border-radius: 20px; }
+  .rejected-badge { font-size: 11px; font-weight: 600; color: var(--red); background: var(--red-light); border: 1px solid #E8C0BA; padding: 4px 10px; border-radius: 20px; }
+
+
+
+  .panel-left::-webkit-scrollbar { width: 4px; }
+  .panel-left::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-group">
+    <img src="data:image/webp;base64,UklGRkgsAABXRUJQVlA4WAoAAAAQAAAAjwEA2AAAQUxQSMAdAAABsEbb2rG91fXg+2Krtm07rn1q69S2bdtKdWo3KGPUjb6Ybezkex9cY9zY9/Pcj/rrjIiQBdtu3DaPpJW4sQgC3ASCi/tJ/2faOV4FObfcA1WSK3PvUruTj68ad9xp25FX5j//xBXkVm1DfnnjbV4VVo5r5Jmdy/pHj+7hWlw9jms80ivnD/h0Docxx1XznuI/IHLKOPRkjmSoJP8geSUctlzJoQwV5DkO+b/kl+4nOk7nQIZq8hFz75L1LrnDuSbrFPl+FFSGk82w4kNetWWpeofofRRCrhAX6T7gaR3IK9P3HpRBZ9nk5157pRLcqy98zaGeuWs8tERv7tOFDKuUhRtQdbg+XEP+3dKET4dwHGkhYt6D6t2KUCj7RAOxv4+8kgzb1ThUg4zlePKrRKPcdorsrerxnUN+KX6iy2zEq4Cvq5JAgoWbLecQVTndS5CpLtX9guuS5+QwRbX47swRaJJXbE5++UX4KQ7fyLGwqvFnc4jim9KO3LK7PqFHKMOfTVNeS1tbjjP64JLL6D5dzgHKtXPXIq+KTBHoPezfKjX4dCSOMNpZ3KGS4AzD/i7ySizsHKFeT8xHaaGC3uowHcd3BvmlxZ815+IIr4Chcm6w1Soc3wHkl9Tdmv4p6w99rOhJebfq8gdyjOJbugl55RTh17g6/0xafVWZvwDHN6kNuWV0fQ6HX+vAtao+8BDm8k8llOl9ug5HOHs1HGE13Zw+wv6N0oFPx3GEVPu17fAdqspY1RsFfFzj28grmbAHc4QiPDQHoXT1tSGfSn6p8GS9hRwinlyUg1Ca4xk4vn1LhNkutRjLAYrwYfmJavSH4viWbEheebSp3+I29UMZYVX6S3HfqaEVuWWBV3AY7sIIq+9mj2OOf1cSBcCjm0XuBEYsMzqa3qu8+D7D/pVSgE+n4AhXbqXcoUIvdb8B3VQc8M3klUDYF0bI3MsUqjC+Neag+CI+kfzC82GjJTjC82CozBvsFOJysFfBGe9Sm4k4wnvlJ6rXH80xNDpcj7yCT0zE7eg7MtYq9lfh+Ma2ILfIeDOFTUG13uwZzP0BBea+R3dJBiCbm4K8V4IjTi8W9uLTmdhce9mmyh0q+tL0Lxzf9eQX1UTQEGFXU6ja+NaZj02ljyO/kGHzFTjCM1Co5hvsbigTu5NfRGObqSDCuMa3y09Uuz8ea0cWrENe8YzRhiYYJ616fz3SHtZ4dLPi3ew9HH6g6ocQ+0tFNmD36AEc4QTjiENlxzeguBM8fDofR7hYHZH7F3BpMQ6bhV5DfpHMAg29mL1Nd6/y+DZYhOM7mvzChG0acXpPRqH6b7A3Lh/RLgURiEedZ6IIA74xeWrdRM5xit20QJdbfzJeqmDumuQVonr2R+H28iVyM1has9IMvG/hGorvjybkFqH78jEO/dP0Jzfdbhuz23zDLr5auJ0iNvO7jBo4SHNDvludnLyK5XUslS8KEJ9Lj6IIazymeYqcVzcx2aKH8xu+f/qsLQr5gyc6P9BtkF/QD9g/RW6RTJ1CXrBumpq5biyH5kX29OVgfrt5fSGZwqEH10LVBfGy9XJbYFxqPbFIk6F8OhxPTIylvi4lErgoCoNAFtDn1xLteuEQxvrKWSvXJye/6dtkKZ4seAT5uQ47hjjCY0Ua0yFKts6edGGNefn5IhdXEYQoDsBLFYQ75th7tMY/5iffDMCqzUUsfnjXIbfQKMj4YMD/rE5ebqvkJr/jNvIZIcWsoK5WV+PvfHKKjGKMn+d5iprk25c4fEXkZAe1ZDfyl8X+JecLUGMJfSriy6/5hukZyxbimNGHY/hmo5zEX1Ggwdg/lsuLT1dj86Y5UgdhE5HWwa0FEYg0lgTtRm4VQfCy/VTcwl9Cfg7DsXggNNxJpMwaFFKRCyKlcGv56QdyiosiWDXkeeKgT7vFHBl78xZfQr6n6xGHHnro0Wfc/Mk88QPwgqJe5BUWhVgW3DCxNneGNLjcXyZSZRUB9wTktL9wjuL1y0fkVhOEYM7D8c3qkqv87lLzMXgJjseF7GzjKKr3pPMFwR2HcMD6hZcJ/UA1gTy6D9/gZ5/cPHVT+uEkfULkWMcRIFc6ddR0DIesIeBTyKsokGEx6hp/JOLLkclGghyWBRBBtAeDmwf8SnXB0Rdrz910Z59uxBMTZ8saOFsIEr7gAHQxfiaqrBePOoERXMnhC8nPSTgRR9i4rUhN9jiVA00kES/oQE5l/eLT1o04voPIz51xQMwHi7RkDpe2ihiIJNqK3MqCENFBeKmCxq1z4D3acDE2175ApCR7ONR2PqAp4gNS1LuOYnphtaVQTTWsIYOkOaopiP0l9IOYczQJ3aVWDXJiIt4gKAcgajoF0nRYMjie50AarHDIx3RagosMOlKkLFlaBEuslqNHjIs0OLkahn6fyMkH/NEcsv7B45LAUShpucE2u+y27fotKcEwf1I6m66z1c6777Bha5XO9KiTlDVfb9vddtuik0JYukymENVxk+1233XzziobbEruE6PkMsYbOBHD5MBVPuD8yiGg6QQzJB0tD35k4PSVkrKV03+8v3s9paufPfHb3rf3nbxUMdWYMeTxQ1oKuabEhoKUbW/oO3WFpGPeyKcPqhc/pMplnU959fc5oaR53m+vndhBZBubdlmGhdvvz/Qtj27nGopwutyKJjeAL8eaILPaOg/O0lq1SBXdpFs7pBjmd0RlftVYnU41rTMf3UCIKg1WdaEjf9BJVSKYeGU9eclz2dYvLzQQOe+pDQV/7Alv9b85yMfSAD6djs21V8itmvKCJpOhjvNQs8Do1hXMYS2MNNMLQQLznHNQWTBnm1NFrokgnYGgc+XtPvkpsOSgr8SdBKmQ0oZ9E4rWpyYPy/waICID5sabLL7p0w4BXqCrJ/mZha4Gc+0eGv25+Niay8CNIjax36e1hzPXImSWpDC/xvxlS0rYP6h7W9AZJqFz9FbkJ0ct5DCQpBoovZicZBr7MSLHRAmIHNiZ/EysgUJeuQX5GYVNl+EIzxbU5wUuHcAREEmwGYZHW8zlRjk0k2SYf3TnJF782Qgh1SR0xo3c2J18M/TUKr3fGFMqKbkrgfdpp+XcKGk0sqGRp69PXkbL6U9rn8kHPGo3GUd4t6A9Y5gUPzVwndMaMt+lteZwI5Yqklwjj2lFboL5eoMVMSXcvpP3Iy/pSwwlCwdP+Tojdz3abJk2Om6mspFnrG7vAy49iW8whMjJfOj5bYXy/PwyQohE/5fBhtT6v+tsT8b5b5Iw+E1uTE5nwEvXJ9fwknp/yYh7GLxDLSYqfEjKhuFWpfiFYUGTTPAOJnwQ5QCG9jDSWRvwE5Akjx4HYlXLjlKAEOevlpW1WQNnolMtpKgEWIPWqDTUm9L1MuJDgmQ18iPkWbTR+gOPXN1DnvX37jXsXNiWXMoLZAJGonGXkA/HJO0uc0isSzUIoigADUws0tG4IWaAQ+3ncsSQzjAKFbsA4C8jLwl0OqV1B+ywsCT0QkO27Moh4kNUk8kKNT7IyHgPm/GtNZeD7HoBPp0rIjQtVJ8XOCL5T8lxSfAv7chBcu2vkmTaTzQEvsavYw54dD/XEJ26OINYpyXieUJrnQCaMEKVStkJQdnyFwPzBgM+CO7pbIhQARlIjkVR7hLhXnI38q2GXoxp3p98yhpHUp0+HaruJZTXucYv4OvesgIFrU707pk9ep79AXOASlq4Kbko23RaqHcQlWzz2fm9ux332N8c6p5rfBN5EDgwzx78zYjFIN+oZY23h01dL8EiPcTccOdRXQ+6apCSMfVscxB5FoV5DEemZWay2VdD5O3TyKfMcZBOzXrnT1B2xwds3w7J1aM+ejGQYeSWKjnb/a5TY9z80aPL5FUP0/dUyWklMxoo95ObJrxRxNyvdxtBz2qnjcHb9UsbLQ/ky09Q1cZ8m0bPcSs4Yv3SnxybpesaDuIs2h6POs7AExNvJY+yRsy/ftmvb99+fb//a4VWDHSxvoYS5VDnRRwBsY7wyfdc1/Op6W+yJOhybQLTNhyIVtSI65LvK3TSE6i2DaXaOtkLX0ykqX6elskCWbYPqNJpnRWgQghF/pB8kJYg+zIgJ+Ztyc1s64mBtvpmLnkjMbmvkUNZgzlOaoYX8sIuKFUencwBqBBXbkB1WgJosxqUR1ddTi5tw5CeY6kedFSwWu5VE3QyLxXKYr0hfZMD1hDyMMSH83Q+CLo+BLrkeroeFNca30m+1fj6Yon2sQJJ2ocJFhfOwUsUhKqD6g6OIuUuAFAeAT8gg+4fxwShntqlhuF/B1VIR3EIfp3SNMkvoWCn66B6aAFHoHzPbA4KxEcc6NmStyEPSKbpNL3+CPnXTO217iDPzsANjrChJbmU4Uv63f0vMzCifgLqFfDWKL0u7QDKcshDKYGcmAPTE1FzISjQMu5IrvklMCyN5dPz6MLL1tBzVMsZSNzfkwvpfJADkJk3tyoYj9ZdgHVfp1so1D5drDQsWj22aAPxRzmFJOoCzEKXNgfNR8ijDcmtG6/LNeJFoGptMokjUMh3hWnw6D0OgMjPIs8MDrcwkHksB0iPt6VKkks7MXpavtFQgfQE5T7g0+1Kxqc9zT1mG3sFmJexze1LbT+qN+TZIzgEfP/QlEU+5YB1v49KkkMbNTKo3ea3JwfiJiFYHU8kwor1DMq6HWTTasxRHp0CiA/5YAiH1lrOgEPPiJJi15+A41u6cUqqfdo+4NC0zHN+EfMPggkYN8DW6TkDSbAiU8qZSkxvINiQ/xTshDgTvnxFbnK7FtCBW47HHXTcD4jneHtDbVgvagQGNaiTqRXdhNbkpqpWV/ubA9OCkPkEqPK2NdQ+L8Bm6F4THoByvU/H2TBz9CMH42iQhJB/cyk92osOPkBXPV3vgRdevrZJ2sP1jqPW8bd8s1esLVnmUt2vCRdMzcPHQu1gGLKKgHrAeWvi3sJXsHK73FhkId7RcSfMN2+Z6OzGjYHqajy9hQW0WQDHSXvqSRiEhL2ovYRBnwSGOLtYvkgiv7PzHCPJ+RwT2BdEmKvnnjiIGfrvMaWjoHHFmSacD0XenxwVr0I8KYEVPtB1Iic95kMcRB7oZoKH3DaiXw6cTx8h1MQ4nvVLywbjc36qwRrT0oP5eRn58ZdfCDegQaoBka9heTeZCDJOwMebcAqoEkMegTsXOu7GcGi9Pn3e7KO4N99+qa2Fl9bzBGCXQcscCLPqyOD6IMh+fAa2jUtw7+AU8hNSdyWOcL5cmjM3CPhAvRXd5X1m4Dnk8YgFLf/Gik8TjoXt0GgfVFahhtQ7fmQAY+ct5lVDB0E3+Ic5HON+Zuabg+yTyHt0pDIWoWVE3pV8yhOOoDrdxvMs7AM+hjzdeHUhFoYJh0HD70lNNXIGQlxthAudFcw3wdiN5zjRYwKg80BRYDLwpzIsDIuTWAC4tLOhwBxJPuUJSB/jeXQqGpUU+JhcXYu5hGOAHib05hBgVgu9cwVxacYvbZLApS1D9BKHJicKjLEKsf+Pt3GECsN4TRdhsP2ZwAG4zmpNXg6Q1DbYp2dBAuOI53cULDDXSxF3M6EHxNzWGqW/QlycNRYkwvZS2GlcgibW+s2FWEAmE2x200wVZQ6V3dnyCoc6iFKASmBv8rS2fwVEV3O/OQJY2Fb74J95x45sBZlN9PPobo5iEM5NRLpPu8Za46afPSxHMNg++nQPByhb36pjw1UQ+5OLsT/E4g4q/DEc5Rs7cWwJZ2Tz9rkiUaBzey+5yXf8EV4lTtps5BJqi4Cr/Y90NdgmteTGknLoKYrND3714/OEhYmwix1wwGdnAJ96y04CtOFKab6HFpfIGilsgw12X787ulo5wJ1XE/aGWLamiiYTc4S2ybArx+hPUriA/2sfPm0jx+FtjE+69JiiGEBLquUHh5iaoYfBrxHPE82QhjQv+2CskQiX5BG7YNSSu5V8vnV41GWWrhcQEUxsQ66VRUs5VM4JklccB8c5Vm2gYbMaftuE/Qy/aJgAcVnmSPcnqeO8ivyMTvJjZZF3l7wRgMaA561NXv5gaqJlBLuQqwhj01qajx0AsbiT9nYDxBUZo10ybBfriPifG6+7Pqm79vadyMlmb1e0yLsNmxa8jGxOcDCGQ6st1UWurmSjYAP8sW6pbiQs9xJMtrsqayxK+Rwa8p8pRWv7+pQeJH9PsDAwuYVcoAgvs5xDEDWfAft8x2lYY1kavUBP/BzaSuPFzxDXZIz2Rhj7/RGPb+bW+Ymdk83yZegUWJa2BwP+lbzgIBO8PzgEOI+8RMIw4RCImbqeZgjEdeSlWCM+M6y5HGFCfX4mwv+HoxhI9VlyrS7LqfQibyMvj6DBENdqNLWYZViIyDOOMyKZNNGk148DgBty9gIaMx3TmhlTAV8yON8ECF9aqvU8ul0ZWUa2MHnAgQa49DUU4T0a6sbCfsGJJpwEx11+1xXF70PcYkJdZ+Q6uRbQIVmV0HwGwpxWeVmbYv2FsBH6rZ5cW12P13DPoxv5uYNH70E8q9M0HFeeycclpeGXhhch7jJ1HPdcMmfuPMXNXThFaErtQ9cDgb59Z1MJOu76K65U3VWXtrJ5t1bj4QPP36uTl8FBHDjkFVuQnz88B/GOCof6QmKuT2Py0k9TY9J9cJz4cROdBzNy/7Sw8bI4WZM5DORLXrWRCWOh/ZoY0re9qANaOtDuQTVqIANN60he5uhtxL0QX+h2PW9DuT5rwpMcYENrzaoeEt/HhDO5MVJdwCPIAjoaYbbriHlnQ5XWpEG302jk0XVZ7PosU3kw+XbtKedzACrYER65ecM1sN77ERzFB+ITk17gMyjy+3QcB4kfaGLbrUCEAX9Objbw6NVkdnjgkUB10gLZsblaNuoOnJ9uYlZypT9e4y5nOAf2C35xNJwN5fq7IZ1142CX71RRboyKLXX+FcQ7EA+Slx6dFnOcBNdykPC5ypXDDiBZz5Nn9QB6ls4waUPp/xi5GaOXEcca+s2JlJW1DZGgXNpCMFCBtnSzJj05TSVhyty/YJfklOxwGLAOVuoJ4zxxHReQZ3PdWcPEXuv+MvwAezn52SP5c/4/rfTaaj7M7heSb9h8RiMo4tlonvxgaGj8MqLTpW2htR9vQ64FLMHAA6UxHM5GdA7VkhCrLZrFqW62pgBZUvofRX6m6Gl87tkD6tCXanpih76FhsB/4DT8yaGxGVIk+yAHoLSuQlPc6yBBotjX2fiTzkbohoEwuRdTHcjFu3EMMsjUZtb2wjOq9jM+WpUs4buSnydsFXJs7sN6UqXEKn8VTXG9inq6GNEDh51cNH8+Vi3xXS2sLwoULLBeBkDbVYDs9E9bje+uQwNgg/YSeZb3wuOQl2yUrp9sT+k/f13ycgA0IxBBn0nr0qYRrt+6E/m+L+jdJ4TkrIAW1fWT8LTem1X1iUt1wznU8o1shqygixFoOALls75qsgRNd4FsqVp9WTwsJzK7y8OBAmvKiS2yQw8J40BHgjFhl75EBTDi6CK1+jy7kUN0fRulwKM7wLxeSf+z7RVydvpVp55j1WovA+j0/IhTPFCdZ9zpRY5iDSGPdm0eltPO5BG7Sv9vReuXKbBrNs2k5ITmdjHrnsc9ecWVz4yTrZh+jeT8K1i8V4qSg/z8N6+57L4fWASdmBrfQr4VLE0Gj45BJVBS0PfOS697ezEKXOOLbVx91QBYCfrkkQx9N9w7fC0zRNwdwmSzFUNDNtEiQMbHgWkdBlZtQNwE242z5gNdlLoNj8waYhDTBlYzQ3dDEB/QoAIIoeikWJHdMdIA2LD/d6b+DKT0Vyai5gU0BEDpGeABZCTYqKZsHMOoqK5YXwAbCM2ChZajQBAaxtCkSplemiE82suwjkuo8AEkK1bWOLR1pIfEu0tlY+CKlf5nkp8POPQNBxrwGJZPt3IjHNMXvxmMS9STICcYIMN0YipqypwIK1jd+AIVfJAP5mQ18jvkWpDbegtgU/O7WbWfSaSv4j5JD/KzQTcTPPqfUREG3OfcKJKYeN+xF8hNYu9ZixPSqehuNyc3IyDX17yuFwrSrMFJf7eW46BG+O81yMvV+Qc45JVbkp8PPAt1ls8huNRkhL4sn3mhwMQbbLyuLjWRbBk0PkQwKWO41HxUQj6wCLPEk4fFOXFKttye/JxtAsMBz+hEXhboasbtEO8ZGN+svzqZLk6wb+WbgqxEnH6alTfjBOs2KquvWcIay5K/eNT8B46S8CGs8aR1yLOxzbRF1X52Sv9RPrmWMBrO5TzAjDN5pUZUo0FTLtN0D3MYRHoTIUUQBRGHlyohkT9LxFdT6DRsBNuwk0mg3QEf5D7GJiyOazobTDYGkoaHJR+Ue4BkBcyfCkWBBYndiVX7F6QLtpX+EUeMt+Wxg5mMXA8zukKiFrcy+j1+ZMn6IIyEExHI8v3ZJokXYnZcWvctZo50OsNAFvmV9zUhP9U+3wasBUlS13Ix8GHfYYgPoboP8+TTyMrdz5KqfcOK2LnxR2Gl/xOWLt5TX3z4seI++vALVbeLe7b/++QjjapPPjBsSq/wt+u7Cxi62S/tnoLtCkE7PDOdsfvjtnXILM7tvvoQJPW9zia7lnc+1Uj6+MOvd0rSWaGDP1vGyEVDz663sSu2Tz1whO+m2z8ja6X/leTnfbN9weJOPW//cGTD9GkNw9+/eb/WgpYUeU+lqcX+1789ZNzUGZP++vbF87fP20b7MslrHvnIV79PmjF59IDnT9tMZg5r37zE1kqkmSr95eeOseMdOJUzkezSUqWyua5VK03LYqgJUtDptWzdTCtLTtqk2uQCTnfT1nIRKPSTPYvfgCelXIk0S6V/pgdHyu64Fa5nae8V13edvB7UAqQGJMvWanJYtb9xOkFlq/Qv2HHp7B9dIIu6KPtkpZ8xYueQq3lQ+gc8PrP10ar4BJ+yB3ZSumosL0r/70UZ+BcDn64A/a70B2fLj9L/zYpFtkZBz6erwvKk9L+LvEoNWRrNfZ2zGiyJvWEc2/oaJBV/qrxACTYOq5MzpX+vivVZGV3/k1K1nzel/6qtK9ZnMykh2CGdaPKn9J/ZpcQ/UJCqK5YjP8WqlH+upuPv52NcPQ9bSdvdPyPkKvh6CAXo+nJNrqlemC97ApL6dMVebE+Kfi9NIcmz0v/qEr9BflUnts69m1ulf8T/qUxvR7U/DaoWJ7dN18nKtdJ/z38L3iUXq96XbFIgcbj6CSHQ5gv/Eh54PrSo2s+70r+hdUnerCgnukOngSxyi/lj+cVXpN4VOg1kmmQXQenfp/RQvKePF7KsqDLflB1tPFpyoShP57a+LlxBlP7nkV/tEa49D6v2m5JbeI0d84Gl5wug3TWckayoHcv+SnzowDQVHmF/o2q/0NnR8N2aKhuvYNX+oeQXeURUVNeGdb0q+o9uNar2C9+dMax7V8l3Pw0vxfggeWXS3X+G3CoOXfED4P9sFIWCHDQWfYvV6g2bL4c10xAqfklw6RHDusKF90X9egD4q2WUjjp172r1LrnDYIRLU6r2i6r0X7wReZX6wPMBLgP7kV8WdcU046JS1fmeqY04hfxyaksHVmd8Pl2CVfs3kVdWfc13yh+Wj2dk6cDtRVf630deNYadQ6Nqv8R0FeeX+83tH3Qm1r+Rc+no8owrUlRfhM3+AowOeM5a5JWQrtu4YkvlRdgPq/Z3JL+MxoJGc82waUBVfgsXqcQ8nPzyGyv9vQm5lfZHN+Nm+mLyS8yWwLAiXoXd/RSs2n+IvHK0tXme3OoK+8vHPFuHsywVpf8NpXiDDA/YB8JQh9zSVCSdVE3eo3ZToJpwanvyytWWuYIi0r+BF/r2dqU6ELFx9XhHP421nSOrlZHSf1Jb8qrnC47jluBU8st2IHtw1cTn00UcGlT75Wvo8Z7wlRIOs6jaLxelP35Ke5C8Kgk7BrDO6VeaWdyjW7AW46LquDi05hyoifqrGbklvVbFkdSkrhJcvdv+D6jan7cWeeVsaB5xMLZhfCW4hjH/cAgeIcKdyS/XUSKk9I+4OpwS0PdnKu+JSnEYVYQLI/2BJ5Cq/dK2Mqio/6ikh2VntXT9EdojQgX/Rz6VndK/WgI8/3x5W3FWzv87lq7aL28r55VB5bhVZf4FqV1yh3L1OE21X9q+y7VXVo274saeZa4HrCpDCrfcVX9+BTmX/r+0I1ZQOCBiDgAAEEsAnQEqkAHZAD5lIIxFpCGhGe+1cEAGRLM3cLO+gHpFovuAfgB+gCaAm7+sfzr9mP3/8q7l3Xv69+0H+A98zgvpW7SfYf0z/d/3L+O/n5z76F/jH5r/sv6//dv159539Q/jX8d+BH6X/4/uAfxL+Rfrl1gPMB+0f7R+8n/XP9b/evcP/av7n+wn+0+QD+b/9D//+uN7AH7r+wL/Qf7d/6fXL/df4Kf63/yv3A/63vSf///0e4B/+vUA/9/Xb9AP4B+CH4Afv73+FKQkevoVKDt6AtQQ0J30ASGs02SKSIr4zXRe4TvycCcJxfGSg8Rgbzc+7r6k/bOoiI085eore+VuI6qQGtdWC/Ukl/19NIzTidVotWKGt8akNpvYmoqseL7dXiOeHnsOLxot1TidVoohhaPpR5Sa1BgCjEb/E2o8QervuvWYsQOX62NKDWQwGlV5PqzmmB3YrlftpA+k/PzoNDatyBfbNszBVMyWR9lHlUnJ/8jLLc/VO5PjeajMtw39KCSCBinGGGKMuH0IzFQOpIzuYr68BOCy9yVnvuwFdrbK0tB68iDJQeMuCoerZCanXGlBviPttmTU1fh35FVsHea3P1RX6A9PXkOqq5mP60SR7pqh0acP2ZXed/5WqiEdheughkEfk9TCOwun06G0PKZrSSEJGbzh3mTYKl1L9U4nVaLXZHXVmPafLohxLgw5b/dQ6Gj89izNdvX08P9Em1HihrUlagjqNyzqFGSXqNFMG//zkdaP4yUHiMDNDNbJ0wlfNcbLh4dsArrgjJQeIwN5yOtH8Y+ekM4rJU0oAP7zwopwvCbpgjj4TRxGBe7PN9baEj4Ivvr2Gy//RyTlceSBpupWyRLtVvq6lw7ZTZA1yazQMBocwZY+Jfyzu9CGGdKm+gPtHYyIutFz8z18J7WBYFAljSwpHvUHPxXN8u1RLgQN+oZnSCODi8negUO9vJ0Ga0Ee7Z9wRcZ91R21ykQCw/mZzbEoo7DhpKeKvBXeIhpF2TXgv1NdKkxSAhUnYZxmmBVFe7J3Mb3ZSvqdhZbuR+I5981AIE1xAwdUaeL4dktF2Ts2UelSEKULwJHsSQVRUJfojPv/d+0QSaM1ShLTWI9CkITnMbAAQQ28coAPUfymmS6u2OAC/x3Hnpm5FcCjXZ0UzPQS+B5z2KBVGqPyW10UeIMstBifORN8OKnvn4vmSWwm3/0DVyNQgAAFP/ecokNGRvVUVdX6PbOo4gjbfwemyebV2w/y9yBEk6bzyZX+EPoIowERFdX+qe+wsP3rNWpASrqzmdafbG3vRdPmqpo07eamIfVWRQ3+ZALhzB3xsK6KYggpRANdOSa7YiW5CD3BJyazH+SVRB6ENs/k2mmO7ROBcz7/VbAnAra2yuHWmrrNMbsplcH7eyNAMfPcaH3bW9TJooFYWBsHJEBqIHMKsaFi8gS2fvns+EnUvtyDXOP1CJndE7y6wryPVbDlYWZdqGG60Qr2LBe13+PEcrKI8sCVPRI7/4VQKMfIhlh/cumQl7hQRQAjRjnKZiB7dv3T6e75wah6GPXQX3GWXR6Rcjkr9gnncJkfx7ap6mrTyfC6OEzYvqav382ZBOrPmcywcCseNvjYRKCxil+IUo2/mPqas/OgGWw0FVKa2xuMT2cwaeJhd7MxW2CIfm1cVXOot+4IA+ng+wCkv6ErW3Dmzj8cLKTo7qCV7ZEBAA6wlLTiSX0Q3t0rgF3d+AA+6A/517Da9RMnZQAAAMxvALA1DyAE6T6e8m45CIfVdII/UmeS5U5F9Kl1ZyckWSP04tjF/csvopEbePw7qLwWpDdggCoaPs0xd6ceSbvahMX9IcpZWeEwyjAJl1bIJZX70Glcos0o0sdRNHN9rn2yeM7oW1DupHinECii+ZRQIbjPlNhzVEyr2w2ZXFk9RLic6Wq5szQaIG6jfmyNNdo/PZQdKbkj9tgmv3bUo6OV1Ht+rJE0Dh96jOeAXCvWmkRnomzmrybPTzdstV8W/RrAGd6leyx75/9maDh1QwcMt+NWhkIXsP8daW9XdMfpiabwph1OwJn5LemvzUgSv/XwnyBL+lrCslq7xga+mmLEhuKisxvMW75XuHrgYNUfBC46h0xt0kubyjG/nDJb8g0+ZSv+77jXwhq/z7+0K0bP1tnndbo4fjNDBCpi3+7hhSWeHgCl2ue/UVS5bLVfFv0awBnepXsse+f+a74awio4mc83//DP729GIRGHfa6drcVu54+YTH8Vs6lJt8ShsAwNFuxvAumQpRWRqSLIP1D41Zrv1s6OncLdZEwGQ4sXcti+/fIEVcHLD0LrrfikYSO2uixW6PLaAtvEMRe2O/xegTQXk0xGfrKco7Ssq1aA0aDALBLh+8RczKAKol5mnXDlEMzzIRBiyug3QetMJ/11cqgN6cGho+eVf3cBi1OOtFuIK/HIZS1xKo+dRzkGJLXn31IK4h+6lxRvVwqQKqyX09Mmjj/TF6LE5jMqtLfVZJ1QTX0nbJEzWPbk4OCsdmMtm1ft12+yZkB1mrZx5o+4FE8EQwu4db9MU1e5Qr+KrMnGsePe13CgRZOAbXAuKQrcuzRmOrs7rp6G6Yiyuov3iqFVsorxXPaiHpqTrNPOMA808vBSOr/yx79F3jZ56f9K7NCh8yy3GUgLWHv7pIAom8yNlcvW6LAay8hRooyEx8oNpOmSarQo+Z4JwaMr9iBjlyN1kfBhgac69o+fd4Y9joA/2za506reNbeXiXt5rRNVLOYndlcOt+l9BnLMqDtBo/NzOTzeldZ53fiBknn/AyDXX6JUrOqn7Z3t3AIjS/IM0GIE4P+/+K+ZOY5+T9a52h3NUXb/TFCNacc6p47h47r4WBQ6aumbr8+qiRDbcI7bAMJ/i2yLXVevPEoWrRud85jrQvu/Gz+IfwiK8xINBjFXKn8QR17Lwp1ISRCnwMj1D3XdpvM5YA8nvF27X4BG+CjX0C5fjYKYbpO9qWCv6zGD6q4V/BuqvzMEjUoepCpOxRZL761J3vXa1fUFrs8c/2/TOWi2/Av2wJrbFxad17jAQvBJZabZ4Fns4fAXOEmS6taG8mdAWJHeMb3JrD1sGVv+6aDRJdUCqriomt8KL4rNjE/wUDsWJyZKqQuyaCOOBtwExxD5tthaBvj03e2aPgmax3TfB35yvENrU9n90bD1YM8aMYY60a+7agY/Hjc/J4Ucc+vt2CrF2U1wRnAHsVi66xOKXeZLEQuie/GQckii/E1bRXcu6a230EOgRpyWatSBe/s/FKw36N/xY1iJ9Sd6vxXLCs6o+sb34hF95ZvScn+Xy5S/5f99zj67h8ckgzgWfRraSWJsiW4xJ/eBJg6PyirWDXxpfjMo1wMVJCVdc4J/geeX6/wccR1riacKS1KDVfc0HayNbjgF2rN4VN/eBCvtDpCJR44P4MP4tBTJW5HY6oJGCV8SiqqvKF1o2evbpVhdf9s+aCpZWhDB2GcAbow0RLxOoFYIhGhjW1cdBOYaeXEDoV/Tsx6tuKsqfeQ8sOrTqlp1puhgIUylgU++a4UhLLYSZvL3sq+X7iCAPDPTM+5UoxQ5N/OEIaccm17gh4bIiZT+xxye4RDi7vXY2ZYebNCApwq0qvGBdVHeklwMbmp6Idy6b+Ks2wjS1738iETwXXs654Td4V0rx/ngAA1lVTmLm8hMao5O83i5w804IIUEM8uUW0AVOGDzcH/eWkA3wWuKLuQCoYBxhA855OetKkNXvbLVnptBDAn24P4BQNgwYJVClshOULCJtG2uXKbds1AZxkpMqBK5t16aVQ5VSSKOO6JucJp/DVN0z3Qa1ZvcGcfJlFONH7qVkvBaz/xJLm7DUkrDUlanmdJwePjQ6iTw8z76uG7FvP/dPV34OIC5OfATmz5xnQ/l/i/AnkhEnxFnyc/xX1vqO0KxMdBICasr5X+OmiCc9BIUeXfnL/V3EVpjZBK4JXoe2rRzz5BrHrIs1oOCD54mY+QlvHmaau7aIs3cheeaP8plSMB009YPpnVzGH9JD3U3dlcxXiWHys5nyEKVhQo5mmmVn51o++WmRl4GPcgGm7ljKNEIZhisXONdW6IYE99V3P7VU3/hZc9dGZkUwuquhCiWFhMVukmOPDTmw5+2OzVbkGzw2jv2gPh8xjMIRwwePuePjqvHkucP0GJQ0/M6G7jdUk4zRhupQyPKoi1+bHDM8P5WZv7g7El+DSwQhuMEZ/gYQrzjhO1u3KZXRfPWC3xahoZG4VX4lvvrQnbkyi/2zLmZldpMqDLqqjdJ9pkviWhy1FsEuKIgoBiANxHtsfHxx4AEk7TMH6FoxzExHec+IPr1Fwd/tkox7ddPBeM2wpXxiFLJyRUJrybw3/58XngejoAAAAACHgCN9bUtGRT7+qpeK7Wzk0fQOvk+nHT5PadVGwyMSS6anw1Gbmwp/7O2hxZH25+5dJJRACk4t6d9AvtQZPvTdA90D3vkhBdEDRrz0sK3g4p1j1aAIe/OgKAoMPxjXpMBeLxQCMXy8IufI+TFB/Vr/bmEM/4VnmChTNQGuMUAARSU+LKBdxDDZf/HvlQSOgs8nx620HK9K7AWRMfhMkL2Un3+PuFQJ0zvIaWaXQb9F6PUQw9sGv2tELCQfYzTOxD39Ul5dIEZymMg6oXQh/tCR/SXL2ReXfRVNOhr7hODAkcHWoHC/OK0CLZ0Udd+S+XR9z/JfPPXCIuvdIiJRjxPCVPdrwGu9MqKU5yUl1Uc5l/3xBI/hdAqvfCYrwSg32vHM6uiw3Sz64FLDHel1VBZ5QRGdRSkZK3pUhKi1feYYkcFCcS8MwhvAMeumsmoQW5x7u0/gaT9NYzZ+NQ6LD9+xIE+oxUsX6O1H3bx1QxcVE0zl/nsgWlptxgybpT5AgnwAAAAAA==" alt="Roche" style="height:38px;width:auto;flex-shrink:0;">
+    <div class="logo-text">
+      <span class="company">Roche Diagnostics</span>
+      <span class="product">AIM Framework &mdash; Messaging Intelligence</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-tabs">
+      <button class="header-tab active" id="tabBrief" onclick="showView('brief')">Messaging recommendations</button>
+      <button class="header-tab" id="tabPool" onclick="showView('pool')">Library candidates <span class="pool-count" id="poolCount">0</span></button>
+    </div>
+    <div class="header-badge">Prototype &middot; Internal Use Only</div>
+  </div>
+</header>
+
+<div class="app-body">
+  <aside class="panel-left">
+    <div>
+      <p class="panel-section-label">Query builder</p>
+      <p class="panel-intro">Select your audience, topic, and context. The agent reads the full message library, reasons about narrative fit, and returns a sequenced brief — not a tag-count ranking.</p>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="deliverable">Deliverable type</label>
+      <select class="field-select" id="deliverable">
+        <option value="sales-deck">Sales deck</option>
+        <option value="ad-campaign">Ad campaign</option>
+        <option value="social-captions">Social captions</option>
+        <option value="leave-behind">Leave-behind document</option>
+        <option value="exec-briefing">Executive briefing</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="audience">Buying influence</label>
+      <select class="field-select" id="audience">
+        <option value="clinical">Clinical (clinician / lab director)</option>
+        <option value="operational">Operational (lab manager / IT)</option>
+        <option value="financial">Financial (economic buyer / CFO)</option>
+        <option value="c-suite">C-suite</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="topic">Topic / cluster</label>
+      <select class="field-select" id="topic">
+        <option value="collaborative-innovation">Collaborative innovation</option>
+        <option value="breadth-platform">Breadth &amp; platform</option>
+        <option value="pharma-dx-integration">Pharma + Dx integration</option>
+        <option value="partner-ecosystem">Partner ecosystem</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="disease">Disease area</label>
+      <select class="field-select" id="disease">
+        <option value="neurology">Neurology</option>
+        <option value="oncology">Oncology</option>
+        <option value="infectious-disease">Infectious disease</option>
+        <option value="cardiometabolic">Cardiometabolic</option>
+        <option value="womens-health">Women's health</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="values">Values layer</label>
+      <select class="field-select" id="values">
+        <option value="ai-digital">AI &amp; Digital</option>
+        <option value="sustainability">Sustainability</option>
+        <option value="global-access">Global access</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+    <button class="generate-btn" id="generateBtn" onclick="runAgent()">
+      &#11041; &nbsp;Generate Messaging Recommendations
+    </button>
+  </aside>
+
+  <main class="panel-right" id="panelRight">
+
+    <!-- Brief view -->
+    <div class="view active" id="viewBrief">
+      <div class="empty-state" id="emptyState">
+        <svg width="100" height="100" viewBox="0 0 100 100" fill="none" style="opacity:0.18;margin-bottom:8px;">
+          <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5" fill="none" stroke="#007AC2" stroke-width="2.5"/>
+          <polygon points="50,20 75,34 75,62 50,76 25,62 25,34" fill="none" stroke="#007AC2" stroke-width="1.5"/>
+          <polygon points="50,36 64,44 64,60 50,68 36,60 36,44" fill="none" stroke="#007AC2" stroke-width="1"/>
+        </svg>
+        <h2>Select your parameters</h2>
+        <p>Configure audience, topic, and context to generate a fully-reasoned messaging brief with source citations.</p>
+      </div>
+      <div id="outputContent" style="display:none;flex-direction:column;gap:32px;"></div>
+    </div>
+
+    <!-- Candidate pool view -->
+    <div class="view" id="viewPool">
+      <div class="pool-header">
+      <div class="pool-header-top">
+          <div>
+            <p class="output-eyebrow">Library development</p>
+            <p class="pool-title">Library candidates</p>
+            <p class="pool-subtitle">AI-generated content flagged for review. Approve to promote to the message library with tags. Reject to discard.</p>
+          </div>
+        </div>
+        <div class="pool-stats" id="poolStats"></div>
+      </div>
+      <div id="poolList"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const MESSAGE_LIBRARY = {
+  "CM-09": { headline: "The only company with Pharma and Dx under one roof", support: "The integration of Roche Pharma and Roche Diagnostics is not structural convenience; it is a unique strategic asset. Insights from one division accelerate breakthroughs in the other, creating a flywheel no standalone diagnostics company can replicate.", role: "Uniquely ownable — no competitor can claim this. Frames the Roche partnership as access to a combined Pharma + Diagnostics intelligence engine. Most powerful in oncology, neurology, and companion diagnostics contexts.", proof: "Companion diagnostics for 60%+ of oncology decisions · Pharma + Dx co-development pipeline including SBX and CDx", tags: ["c-suite","lab-director","unified-roche","oncology","neurology","cdx","pharma-dx-integration","collaborative-innovation"] },
+  "CM-10": { headline: "We co-create with the people who use our solutions", support: "Our innovations emerge from deep collaboration with clinicians, lab scientists, hospital systems, universities, and biotech partners — not from assumptions made in isolation. The best ideas come from inside the lab, and we listen.", role: "Addresses the frustration that vendors design in boardrooms, not labs. Repositions Roche as a genuine partner that designs with customers, not for them.", proof: "20+ AI algorithm partners in navify open environment · Active in-licensing agreements across 133+ partnerships", tags: ["lab-director","lab-manager","clinician","co-creation","collaborative-innovation","ai-digital","neurology","oncology"] },
+  "CM-11": { headline: "We collaborate with 250+ external partners because no one has all the answers", support: "Innovation at the pace healthcare demands requires us to reach beyond our own walls. Through alliances with universities, health systems, biotech firms, and AI companies, we stay connected to the leading edge of global science — wherever it emerges.", role: "Expands the collaboration message from internal Roche synergy to the wider partner network.", proof: "250+ external R&D alliances · 133 active in-licensing agreements · 327 active out-licensing agreements", tags: ["c-suite","lab-director","ecosystem","co-creation","collaborative-innovation","ai-digital","partner-ecosystem","neurology"] },
+  "CM-12": { headline: "Diverse perspectives are how we find answers nobody else is looking for", support: "Healthcare is global, its challenges are varied, and its solutions must reflect that. We deliberately bring together different disciplines, geographies, and lived experiences because the most important diagnostic breakthroughs are rarely found from a single vantage point.", role: "Brings the people and culture dimension into the innovation narrative.", proof: "~40,000 employees in 100+ countries · Global Access programs in cervical cancer and infectious disease", tags: ["c-suite","clinician","people-culture","co-creation","collaborative-innovation","global-access","neurology","sustainability"] },
+  "CM-13": { headline: "One platform, every dimension of the lab", support: "From core lab automation to molecular diagnostics, digital pathology, near-patient care, and data intelligence — Roche Diagnostics offers an integrated ecosystem that no patchwork of point solutions can match.", role: "Answers the C-suite question about consolidation risk and the economic buyer's concern about managing multiple vendor lifecycles.", proof: ">100,000 installed instruments worldwide · >5,000 lab & POC software deployments · navify covers core lab, molecular, pathology, POC", tags: ["c-suite","lab-director","economic-buyer","ecosystem","breadth-platform","ai-digital","oncology","neurology"] },
+  "CM-14": { headline: "Innovation that works at scale — and in the smallest lab", support: "Whether you are a national reference laboratory or a regional hospital, our solutions are designed to perform with the same rigour. We democratise access to sophisticated diagnostics, not just for the few.", role: "Counters the perception that Roche innovation is only for large institutions.", proof: "LumiraDx POC platform for decentralised settings · HPV Global Access Program · cobas vital for smaller labs", tags: ["lab-director","lab-manager","economic-buyer","breadth-platform","global-access","sustainability","infectious-disease"] },
+  "CM-15": { headline: "A portfolio this broad means fewer gaps in your care pathway", support: "With solutions spanning oncology, neurology, infectious disease, cardiometabolic, women's health, and diabetes management, Roche covers the disease areas that matter most.", role: "Reframes portfolio breadth as a clinical care continuity argument, not a product catalogue.", proof: "Coverage: Oncology · Neurology · Infectious disease · Cardiometabolic · Women's health · Diabetes · >500 assays", tags: ["c-suite","lab-director","portfolio-breadth","breadth-platform","neurology","oncology","cardiometabolic","womens-health"] },
+  "CM-16": { headline: "Consolidating to Roche is a decision that compounds in value over time", support: "Every new Roche solution you add connects to what you already have. Our open, integrated architecture means that moving from one instrument to a full ecosystem is not a rip-and-replace — it is a compounding return on a single strategic decision.", role: "Reframes consolidation not as vendor lock-in but as a compounding investment.", proof: "cobas ultra extensible platform · navify modular suite — add capabilities without replacing infrastructure · >6,500 navify customers", tags: ["economic-buyer","lab-director","tco","ecosystem","breadth-platform","ai-digital"] }
+};
+
+// Candidate pool — persists across sessions
+let candidatePool = JSON.parse(localStorage.getItem('roche_candidates') || '[]');
+let currentContext = {};
+
+function savePool() {
+  localStorage.setItem('roche_candidates', JSON.stringify(candidatePool));
+  updatePoolBadge();
+}
+
+function updatePoolBadge() {
+  const pending = candidatePool.filter(c => c.status === 'pending').length;
+  const btn = document.getElementById('poolNavBtn');
+  const count = document.getElementById('poolCount');
+  count.textContent = pending;
+  btn.classList.toggle('has-items', pending > 0);
+}
+
+function addToPool(text, type, context, suggestedTags) {
+  // Avoid exact duplicates
+  if (candidatePool.find(c => c.text === text)) return;
+  candidatePool.push({
+    id: 'cand-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+    text,
+    type,
+    context: { ...context },
+    suggestedTags: suggestedTags || [],
+    status: 'pending',
+    addedAt: new Date().toISOString()
+  });
+  savePool();
+}
+
+function showView(view) {
+  document.getElementById('viewBrief').classList.toggle('active', view === 'brief');
+  document.getElementById('viewPool').classList.toggle('active', view === 'pool');
+  if (view === 'pool') renderPool();
+}
+
+function renderPool() {
+  const list = document.getElementById('poolList');
+  const stats = document.getElementById('poolStats');
+
+  const total = candidatePool.length;
+  const pending = candidatePool.filter(c => c.status === 'pending').length;
+  const approved = candidatePool.filter(c => c.status === 'approved').length;
+  const rejected = candidatePool.filter(c => c.status === 'rejected').length;
+
+  stats.innerHTML =
+    '<div class="pool-stat"><strong>' + total + '</strong> total</div>' +
+    '<div class="pool-stat"><strong>' + pending + '</strong> pending review</div>' +
+    '<div class="pool-stat"><strong style="color:var(--green)">' + approved + '</strong> approved</div>' +
+    '<div class="pool-stat"><strong style="color:var(--red)">' + rejected + '</strong> rejected</div>';
+
+  if (total === 0) {
+    list.innerHTML = '<div class="pool-empty"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="opacity:0.2;margin:0 auto 12px;display:block;"><polygon points="24,3 43,13.5 43,34.5 24,45 5,34.5 5,13.5" fill="none" stroke="#007AC2" stroke-width="2"/></svg><p>No candidates yet. Generate a brief — all [AI] sentences are automatically flagged here for review.</p></div>';
+    return;
+  }
+
+  // Show pending first, then approved, then rejected
+  const sorted = [...candidatePool].sort((a,b) => {
+    const order = { pending: 0, approved: 1, rejected: 2 };
+    return (order[a.status] - order[b.status]) || (new Date(b.addedAt) - new Date(a.addedAt));
+  });
+
+  list.innerHTML = '';
+  sorted.forEach(cand => {
+    const card = document.createElement('div');
+    card.className = 'candidate-card' + (cand.status !== 'pending' ? ' ' + cand.status : '');
+    card.id = 'cand-' + cand.id;
+
+    const typeLabel = cand.type === 'headline' ? 'Headline' : 'Body copy';
+    const typeCls = cand.type === 'headline' ? 'type-headline' : 'type-copy';
+    const ctx = cand.context;
+    const contextStr = [ctx.deliverable, ctx.audience, ctx.disease, ctx.values].filter(Boolean).join(' · ');
+
+    const tagsHtml = cand.suggestedTags.map(t => '<span class="candidate-tag">' + t + '</span>').join('');
+
+    let actionsHtml = '';
+    if (cand.status === 'pending') {
+      actionsHtml =
+        '<div class="candidate-actions">' +
+        '<button class="action-btn reject-btn" onclick="reviewCandidate(\'' + cand.id + '\', \'rejected\')">Reject</button>' +
+        '<button class="action-btn approve-btn" onclick="reviewCandidate(\'' + cand.id + '\', \'approved\')">Approve for library</button>' +
+        '</div>';
+    } else if (cand.status === 'approved') {
+      actionsHtml = '<span class="approved-badge">&#10003; Approved</span>';
+    } else {
+      actionsHtml = '<span class="rejected-badge">&#10005; Rejected</span>';
+    }
+
+    card.innerHTML =
+      '<div class="candidate-top">' +
+        '<div class="candidate-meta">' +
+          '<span class="candidate-type ' + typeCls + '">' + typeLabel + '</span>' +
+          '<span class="candidate-context">' + contextStr + '</span>' +
+        '</div>' +
+        '<div class="candidate-text">' + cand.text + '</div>' +
+      '</div>' +
+      '<div class="candidate-bottom">' +
+        '<div class="candidate-tags-wrap">' +
+          '<span class="candidate-tag-label">Suggested tags</span>' +
+          tagsHtml +
+          (cand.status === 'pending' ? '<input class="candidate-tag-input" id="tag-input-' + cand.id + '" placeholder="add tag, press enter" onkeydown="addTag(event, \'' + cand.id + '\')">' : '') +
+        '</div>' +
+        actionsHtml +
+      '</div>';
+
+    list.appendChild(card);
+  });
+}
+
+function addTag(e, id) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('tag-input-' + id);
+  const val = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!val) return;
+  const cand = candidatePool.find(c => c.id === id);
+  if (cand && !cand.suggestedTags.includes(val)) {
+    cand.suggestedTags.push(val);
+    savePool();
+    renderPool();
+  }
+  input.value = '';
+}
+
+function reviewCandidate(id, status) {
+  const cand = candidatePool.find(c => c.id === id);
+  if (cand) { cand.status = status; savePool(); renderPool(); }
+}
+
+function buildSystemPrompt() {
+  const library = Object.entries(MESSAGE_LIBRARY).map(([id, msg]) =>
+    '[' + id + ']\nHeadline: "' + msg.headline + '"\nSupport copy: "' + msg.support + '"\nMessaging role: ' + msg.role + '\nProof points: ' + msg.proof + '\nTags: ' + msg.tags.join(', ')
+  ).join('\n---\n');
+
+  return `You are a senior brand strategist at Roche Diagnostics working with the AIM Framework message library.
+
+Your task: produce a structured messaging brief for a specific deliverable.
+
+PROCESS:
+1. ANALYSE — Select the most relevant messages. For each, explain WHY it fits this specific audience, disease area, and values layer — reasoning about narrative fit and persuasion logic, not just tag matches.
+2. ARCHITECT — Recommend a slide/section structure with a narrative arc that mirrors how this specific buying influence builds trust.
+3. DRAFT — Write the deliverable. You may write connective tissue and headlines. Cite EVERY sentence and EVERY headline with either [CM-XX] for library-sourced content or [AI] for content you wrote. Headlines are not exempt — if you wrote the headline, tag it [AI]. If it comes verbatim from a library message headline, tag it with [CM-XX].
+4. GAP REPORT — Identify topics this audience would want that the library doesn't yet cover.
+
+RULES:
+- Never invent claims or statistics not in the library
+- Never paraphrase core messages in ways that change their meaning
+- EVERY headline must carry a citation — [CM-XX] if verbatim from library, [AI] if written by you
+- EVERY body copy sentence must carry a citation inline
+- priority must be exactly one of: lead, support, bridge, close
+- headline_source must be exactly: "library" if the headline is verbatim from a CM headline, "ai" if you wrote it
+
+Return ONLY valid JSON in this exact structure (no markdown, no preamble):
+{
+  "analysis": [
+    { "id": "CM-XX", "headline": "...", "rationale": "...", "priority": "lead" }
+  ],
+  "architecture": {
+    "arc": "one sentence describing the narrative arc",
+    "slides": [
+      {
+        "position": 1,
+        "label": "slide purpose",
+        "headline": "slide headline text",
+        "headline_source": "ai",
+        "copy": "body copy with [CM-XX] and [AI] citations inline after each sentence",
+        "visual_note": "visual direction",
+        "sources": ["CM-XX"]
+      }
+    ]
+  },
+  "gaps": [
+    { "title": "gap title", "description": "gap description" }
+  ]
+}
+
+MESSAGE LIBRARY:
+${library}`;
+}
+
+async function runAgent() {
+  const btn = document.getElementById('generateBtn');
+  const deliverableEl = document.getElementById('deliverable');
+  const audienceEl = document.getElementById('audience');
+  const topicEl = document.getElementById('topic');
+  const diseaseEl = document.getElementById('disease');
+  const valuesEl = document.getElementById('values');
+
+  const deliverableLabel = deliverableEl.options[deliverableEl.selectedIndex].text;
+  const audienceLabel = audienceEl.options[audienceEl.selectedIndex].text;
+  const topicLabel = topicEl.options[topicEl.selectedIndex].text;
+  const diseaseLabel = diseaseEl.options[diseaseEl.selectedIndex].text;
+  const valuesLabel = valuesEl.options[valuesEl.selectedIndex].text;
+
+  currentContext = { deliverable: deliverableLabel, audience: audienceLabel, topic: topicLabel, disease: diseaseLabel, values: valuesLabel };
+
+  showView('brief');
+  btn.disabled = true;
+  btn.textContent = 'Analysing\u2026';
+
+  document.getElementById('emptyState').style.display = 'none';
+  const outputContent = document.getElementById('outputContent');
+  outputContent.style.display = 'flex';
+  outputContent.innerHTML = '';
+
+  const headerEl = document.createElement('div');
+  headerEl.className = 'output-header';
+  headerEl.innerHTML =
+    '<p class="output-eyebrow">Messaging recommendations</p>' +
+    '<p class="output-query">' + deliverableLabel + ' &mdash; ' + audienceLabel + '</p>' +
+    '<div class="output-tags">' +
+      '<span class="otag otag-blue">' + topicLabel + '</span>' +
+      '<span class="otag otag-blue">' + diseaseLabel + '</span>' +
+      '<span class="otag otag-gray">' + valuesLabel + '</span>' +
+    '</div>';
+  outputContent.appendChild(headerEl);
+
+  const steps = [
+    'Reading full message library (CM-09 through CM-16)\u2026',
+    'Identifying relevant clusters for this audience and context\u2026',
+    'Reasoning about narrative sequence and persuasion logic\u2026',
+    'Drafting copy with inline source citations\u2026',
+    'Flagging AI-generated content for library review\u2026'
+  ];
+
+  const loadingWrap = document.createElement('div');
+  loadingWrap.className = 'loading-wrap';
+  steps.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'thinking-step';
+    el.id = 'step-' + i;
+    el.innerHTML = '<div class="thinking-dot"></div><span>' + s + '</span>';
+    loadingWrap.appendChild(el);
+  });
+  outputContent.appendChild(loadingWrap);
+
+  for (let i = 0; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    document.getElementById('step-' + i).classList.add('visible','active');
+    if (i > 0) {
+      const prev = document.getElementById('step-' + (i-1));
+      prev.classList.remove('active');
+      prev.classList.add('done');
+    }
+  }
+
+  const userPrompt = 'Generate a ' + deliverableLabel + ' for:\n- Buying influence: ' + audienceLabel + '\n- Topic / cluster: ' + topicLabel + '\n- Disease area: ' + diseaseLabel + '\n- Values layer: ' + valuesLabel + '\n\nAnalyse the full library, select the best messages with reasoning, architect a narrative sequence for this specific audience, draft copy with citations on every sentence and every headline, and identify gaps.';
+
+  let result;
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: buildSystemPrompt(),
+        userPrompt: userPrompt
+      })
+    });
+    if (!response.ok) {
+      let errMsg = 'Server error ' + response.status;
+      try { const e = await response.json(); errMsg = e.error || errMsg; } catch (_) {}
+      throw new Error(errMsg);
+    }
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.result) throw new Error('Server returned empty result');
+    result = data.result;
+  } catch (err) {
+    loadingWrap.innerHTML = '<p style="color:#C0392B;font-size:13px;">Error generating brief. Please try again.<br><small>' + err.message + '</small></p>';
+    btn.disabled = false;
+    btn.innerHTML = '&#11041; &nbsp;Generate Messaging Recommendations';
+    return;
+  }
+
+  document.getElementById('step-' + (steps.length-1)).classList.remove('active');
+  document.getElementById('step-' + (steps.length-1)).classList.add('done');
+  await new Promise(r => setTimeout(r, 300));
+  loadingWrap.remove();
+
+  // Auto-flag all AI content into candidate pool
+  const suggestedTags = [
+    audienceEl.value,
+    topicEl.value,
+    diseaseEl.value,
+    valuesEl.value !== 'none' ? valuesEl.value : null
+  ].filter(Boolean);
+
+  (result.architecture || {}).slides && result.architecture.slides.forEach(slide => {
+    // Flag AI headlines
+    if (slide.headline_source === 'ai' && slide.headline) {
+      addToPool(slide.headline, 'headline', currentContext, [...suggestedTags]);
+    }
+    // Flag AI body sentences
+    if (slide.copy) {
+      const sentences = slide.copy.split(/(?<=[.!?])\s+/);
+      let buffer = '';
+      sentences.forEach(s => {
+        buffer += (buffer ? ' ' : '') + s;
+        if (/\[AI\]/.test(s)) {
+          const clean = buffer.replace(/\[AI\]/g, '').replace(/\[CM-\d+\]/g, '').trim();
+          if (clean.length > 20) addToPool(clean, 'copy', currentContext, [...suggestedTags]);
+          buffer = '';
+        } else if (/\[CM-\d+\]/.test(s)) {
+          buffer = '';
+        }
+      });
+    }
+  });
+
+  const priorityMap = {
+    lead: { label: 'Lead message', cls: 'priority-lead' },
+    support: { label: 'Support', cls: 'priority-support' },
+    bridge: { label: 'Bridge', cls: 'priority-bridge' },
+    close: { label: 'Close', cls: 'priority-close' }
+  };
+
+  // Step 1: Analysis
+  const analysisBlock = document.createElement('div');
+  analysisBlock.className = 'step-block';
+  analysisBlock.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">Messaging analysis &mdash; cluster selection &amp; rationale</div></div>';
+
+  (result.analysis || []).forEach(msg => {
+    const lib = MESSAGE_LIBRARY[msg.id] || {};
+    const p = priorityMap[msg.priority] || { label: msg.priority || 'support', cls: 'priority-support' };
+    const card = document.createElement('div');
+    card.className = 'cluster-card';
+    card.innerHTML =
+      '<div class="cluster-top"><div class="cluster-headline">' + (msg.headline || lib.headline || '') + '</div><div class="cluster-msg-id">' + msg.id + '</div></div>' +
+      '<div class="cluster-rationale">' + (msg.rationale || '') + '</div>' +
+      '<div class="cluster-meta"><span class="cluster-priority ' + p.cls + '">' + p.label + '</span>' +
+      (lib.tags || []).slice(0,5).map(t => '<span class="cluster-chip">' + t + '</span>').join('') + '</div>';
+    analysisBlock.appendChild(card);
+  });
+  outputContent.appendChild(analysisBlock);
+
+  const d1 = document.createElement('hr'); d1.className = 'divider';
+  outputContent.appendChild(d1);
+
+  // Step 2: Architecture
+  const archBlock = document.createElement('div');
+  archBlock.className = 'step-block';
+  archBlock.innerHTML =
+    '<div class="step-heading"><div class="step-num">2</div><div class="step-title">Narrative architecture &mdash; ' + deliverableLabel + ' structure</div></div>' +
+    '<p class="arc-note">' + ((result.architecture || {}).arc || '') + '</p>';
+
+  ((result.architecture || {}).slides || []).forEach(slide => {
+    const srcs = (slide.sources || []).map(s => '<span class="slide-src-id">' + s + '</span>').join('');
+    const isAiHeadline = slide.headline_source === 'ai';
+    const headlineCite = isAiHeadline
+      ? '<span class="cite-ai flagged">[AI]</span>'
+      : '<span class="cite-msg">[' + (slide.sources && slide.sources[0] ? slide.sources[0] : 'CM') + ']</span>';
+
+    const formattedCopy = (slide.copy || '')
+      .replace(/\[CM-\d+\]/g, m => '<span class="cite-msg">' + m + '</span>')
+      .replace(/\[AI\]/g, '<span class="cite-ai">[AI]</span>');
+
+    const el = document.createElement('div');
+    el.className = 'slide-draft';
+    el.innerHTML =
+      '<div class="slide-tab"><div class="slide-dot"></div><div class="slide-tab-label">Slide ' + slide.position + ' &mdash; ' + (slide.label || '') + '</div>' + srcs + '</div>' +
+      '<div class="slide-body">' +
+        '<div class="slide-headline-wrap"><span class="slide-headline">' + (slide.headline || '') + '</span>' + headlineCite + '</div>' +
+        '<div class="slide-copy">' + formattedCopy + '</div>' +
+        (slide.visual_note ? '<div class="slide-note">&#9658; ' + slide.visual_note + '</div>' : '') +
+      '</div>';
+    archBlock.appendChild(el);
+  });
+
+  const keyEl = document.createElement('div');
+  keyEl.className = 'cite-key';
+  keyEl.innerHTML =
+    '<strong style="color:var(--warm-dark);font-size:11px;">Citation key</strong>' +
+    '<span class="cite-key-item"><span class="cite-msg" style="margin:0;">CM-XX</span>Sourced from approved library message</span>' +
+    '<span class="cite-key-item"><span class="cite-ai flagged" style="margin:0;">[AI]</span>Agent-written — auto-flagged to library candidates</span>';
+  archBlock.appendChild(keyEl);
+  outputContent.appendChild(archBlock);
+
+  // Step 3: Gaps
+  if ((result.gaps || []).length > 0) {
+    const d2 = document.createElement('hr'); d2.className = 'divider';
+    outputContent.appendChild(d2);
+    const gapBlock = document.createElement('div');
+    gapBlock.className = 'step-block';
+    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">3</div><div class="step-title">Gap report &mdash; library coverage analysis</div></div>';
+    result.gaps.forEach(gap => {
+      const el = document.createElement('div');
+      el.className = 'gap-card';
+      el.innerHTML = '<div class="gap-icon">&#9651;</div><div><div class="gap-title">' + gap.title + '</div><div class="gap-text">' + gap.description + '</div></div>';
+      gapBlock.appendChild(el);
+    });
+    outputContent.appendChild(gapBlock);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '&#11041; &nbsp;Generate Messaging Recommendations';
+  updatePoolBadge();
+  outputContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+updatePoolBadge();
+</script>
+</body>
+</html>
