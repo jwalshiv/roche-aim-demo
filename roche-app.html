@@ -135,6 +135,147 @@
 
   .divider { border: none; border-top: 1px solid var(--border); }
 
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+
+    /* Header */
+    header { padding: 0 16px; height: 52px; }
+    .logo-text .product { display: none; }
+    .header-badge { display: none; }
+    .header-tabs { display: none; }
+
+    /* Bottom nav replaces header tabs on mobile */
+    .mobile-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      z-index: 200;
+      height: 56px;
+    }
+    .mobile-nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--warm-pale);
+      background: none;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color 0.15s;
+      padding: 6px 0;
+    }
+    .mobile-nav-btn.active { color: var(--blue); }
+    .mobile-nav-btn.active-amber { color: var(--amber); }
+    .mobile-nav-icon { font-size: 18px; line-height: 1; }
+    .mobile-pool-badge {
+      position: absolute;
+      top: 8px;
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--amber);
+      color: #fff;
+      border-radius: 8px;
+      padding: 1px 5px;
+      display: none;
+    }
+    .mobile-nav-btn.has-pending .mobile-pool-badge { display: block; }
+
+    /* Layout: single column */
+    .app-body {
+      grid-template-columns: 1fr;
+      min-height: calc(100vh - 52px);
+      padding-bottom: 56px;
+    }
+
+    /* Left panel: collapsible drawer */
+    .panel-left {
+      position: fixed;
+      top: 52px; left: 0; right: 0;
+      height: auto;
+      max-height: calc(100vh - 52px - 56px);
+      overflow-y: auto;
+      transform: translateY(-110%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 150;
+      padding: 20px 20px 24px;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .panel-left.open { transform: translateY(0); }
+    .panel-intro { display: none; }
+    .generate-btn { margin-top: 8px; padding: 12px; font-size: 13px; }
+
+    /* Right panel */
+    .panel-right { padding: 20px 16px; gap: 24px; }
+
+    /* Output header */
+    .output-query { font-size: 16px; }
+
+    /* Cluster cards */
+    .cluster-card { padding: 14px 16px; }
+    .cluster-headline { font-size: 14px; }
+    .cluster-rationale { font-size: 12px; }
+
+    /* Slide drafts */
+    .slide-body { padding: 14px 16px; }
+    .slide-headline { font-size: 15px; }
+    .slide-copy { font-size: 12px; }
+
+    /* Citation key: stack vertically */
+    .cite-key { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+    /* Pool view */
+    .pool-header { padding-bottom: 16px; }
+    .pool-title { font-size: 17px; }
+    .candidate-top { padding: 14px 16px 12px; }
+    .candidate-bottom { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 16px; }
+    .candidate-actions { width: 100%; }
+    .action-btn { flex: 1; text-align: center; }
+
+    /* Empty state */
+    .empty-state { padding: 40px 24px; }
+
+    /* Loading steps */
+    .thinking-step { font-size: 12px; }
+
+    /* Mobile form toggle button */
+    .mobile-form-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: calc(100% - 32px);
+      margin: 16px 16px 0;
+      padding: 12px 16px;
+      background: var(--blue-deeper);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .mobile-form-toggle-icon { font-size: 16px; }
+    .mobile-form-toggle-label { flex: 1; text-align: left; }
+    .mobile-form-toggle-arrow { font-size: 12px; opacity: 0.6; transition: transform 0.2s; }
+    .panel-left.open ~ * .mobile-form-toggle-arrow,
+    .mobile-form-toggle.open .mobile-form-toggle-arrow { transform: rotate(180deg); }
+  }
+
+  @media (min-width: 769px) {
+    .mobile-nav { display: none; }
+    .mobile-form-toggle { display: none; }
+  }
+
   /* ── Candidate pool view ── */
   .pool-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
   .pool-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -202,7 +343,15 @@
 </header>
 
 <div class="app-body">
-  <aside class="panel-left">
+
+  <!-- Mobile form toggle (small screens only) -->
+  <button class="mobile-form-toggle" id="mobileFormToggle" onclick="toggleMobileForm()">
+    <span class="mobile-form-toggle-icon">&#9881;</span>
+    <span class="mobile-form-toggle-label" id="mobileToggleLabel">Configure query</span>
+    <span class="mobile-form-toggle-arrow" id="mobileToggleArrow">&#9660;</span>
+  </button>
+
+  <aside class="panel-left" id="panelLeft">
     <div>
       <p class="panel-section-label">Query builder</p>
       <p class="panel-intro">Select your audience, topic, and context. The agent reads the full message library, reasons about narrative fit, and returns a sequenced brief — not a tag-count ranking.</p>
@@ -293,6 +442,19 @@
   </main>
 </div>
 
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-btn active" id="mobileTabBrief" onclick="showView('brief')">
+    <span class="mobile-nav-icon">&#9776;</span>
+    Brief
+  </button>
+  <button class="mobile-nav-btn" id="mobileTabPool" onclick="showView('pool')" style="position:relative;">
+    <span class="mobile-pool-badge" id="mobilePoolBadge">0</span>
+    <span class="mobile-nav-icon">&#9651;</span>
+    Candidates
+  </button>
+</nav>
+
 <script>
 const MESSAGE_LIBRARY = {
   "CM-09": { headline: "The only company with Pharma and Dx under one roof", support: "The integration of Roche Pharma and Roche Diagnostics is not structural convenience; it is a unique strategic asset. Insights from one division accelerate breakthroughs in the other, creating a flywheel no standalone diagnostics company can replicate.", role: "Uniquely ownable — no competitor can claim this. Frames the Roche partnership as access to a combined Pharma + Diagnostics intelligence engine. Most powerful in oncology, neurology, and companion diagnostics contexts.", proof: "Companion diagnostics for 60%+ of oncology decisions · Pharma + Dx co-development pipeline including SBX and CDx", tags: ["c-suite","lab-director","unified-roche","oncology","neurology","cdx","pharma-dx-integration","collaborative-innovation"] },
@@ -340,6 +502,30 @@ function addToPool(text, type, context, suggestedTags) {
 function showView(view) {
   document.getElementById('viewBrief').classList.toggle('active', view === 'brief');
   document.getElementById('viewPool').classList.toggle('active', view === 'pool');
+  // Desktop tabs
+  const tabBrief = document.getElementById('tabBrief');
+  const tabPool = document.getElementById('tabPool');
+  if (tabBrief) tabBrief.classList.toggle('active', view === 'brief');
+  if (tabPool) {
+    tabPool.classList.remove('active','active-amber');
+    if (view === 'pool') {
+      const pending = candidatePool.filter(c => c.status === 'pending').length;
+      tabPool.classList.add(pending > 0 ? 'active-amber' : 'active');
+    }
+  }
+  // Mobile nav
+  const mobileTabBrief = document.getElementById('mobileTabBrief');
+  const mobileTabPool = document.getElementById('mobileTabPool');
+  if (mobileTabBrief) mobileTabBrief.classList.toggle('active', view === 'brief');
+  if (mobileTabPool) {
+    mobileTabPool.classList.remove('active','active-amber');
+    if (view === 'pool') {
+      const pending = candidatePool.filter(c => c.status === 'pending').length;
+      mobileTabPool.classList.add(pending > 0 ? 'active-amber' : 'active');
+    }
+  }
+  // Close mobile form drawer
+  closeMobileForm();
   if (view === 'pool') renderPool();
 }
 
@@ -505,6 +691,7 @@ async function runAgent() {
   showView('brief');
   btn.disabled = true;
   btn.textContent = 'Analysing\u2026';
+  closeMobileForm();
 
   document.getElementById('emptyState').style.display = 'none';
   const outputContent = document.getElementById('outputContent');
@@ -576,7 +763,6 @@ async function runAgent() {
     if (data.error) throw new Error(data.error);
     if (!data.result) throw new Error('Server returned empty result');
     result = data.result;
-    // Ensure all expected keys exist to prevent render freeze
     result.analysis = result.analysis || [];
     result.architecture = result.architecture || { arc: '', slides: [] };
     result.architecture.slides = result.architecture.slides || [];
@@ -592,6 +778,7 @@ async function runAgent() {
   document.getElementById('step-' + (steps.length-1)).classList.add('done');
   await new Promise(r => setTimeout(r, 300));
   loadingWrap.remove();
+
 
   // Safety: log what we got
   console.log('Result keys:', Object.keys(result));
@@ -723,6 +910,26 @@ async function runAgent() {
 }
 
 updatePoolBadge();
+
+// ── Mobile ──
+function toggleMobileForm() {
+  const panel = document.getElementById('panelLeft');
+  const arrow = document.getElementById('mobileToggleArrow');
+  const label = document.getElementById('mobileToggleLabel');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  label.textContent = isOpen ? 'Configure query' : 'Close';
+}
+
+function closeMobileForm() {
+  const panel = document.getElementById('panelLeft');
+  const arrow = document.getElementById('mobileToggleArrow');
+  const label = document.getElementById('mobileToggleLabel');
+  panel.classList.remove('open');
+  arrow.style.transform = '';
+  label.textContent = 'Configure query';
+}
 </script>
 </body>
 </html>
