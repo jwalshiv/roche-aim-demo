@@ -573,6 +573,11 @@ async function runAgent() {
     if (data.error) throw new Error(data.error);
     if (!data.result) throw new Error('Server returned empty result');
     result = data.result;
+    // Ensure all expected keys exist to prevent render freeze
+    result.analysis = result.analysis || [];
+    result.architecture = result.architecture || { arc: '', slides: [] };
+    result.architecture.slides = result.architecture.slides || [];
+    result.gaps = result.gaps || [];
   } catch (err) {
     loadingWrap.innerHTML = '<p style="color:#C0392B;font-size:13px;">Error generating brief. Please try again.<br><small>' + err.message + '</small></p>';
     btn.disabled = false;
