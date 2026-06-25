@@ -41,9 +41,9 @@ RULES:
 - Every headline must have a citation tag
 - Never invent claims, statistics, or differentiators not in the library
 - CRITICAL: Every slide or ad unit must contain at least one sentence sourced verbatim or near-verbatim from the approved library, cited [CM-XX]. [AI] is permitted only for headlines, transitions, and structural framing — never for substantive claims.
-- If you cannot find relevant approved content for a section, do NOT fill it with AI-generated claims. Instead, omit that section and add it to the gaps array with an explanation.
+- If you cannot find relevant approved content for a section, omit it and add it to the gaps array instead.
 
-JSON structure (follow exactly):
+JSON structure:
 {
   "analysis": [{"id":"CM-XX","headline":"...","rationale":"...","priority":"lead"}],
   "architecture": {
@@ -77,6 +77,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Streaming endpoint
   if (req.method === 'POST' && reqPath === '/api/generate') {
     const chunks = [];
     req.on('data', chunk => chunks.push(chunk));
@@ -90,11 +91,20 @@ const server = http.createServer((req, res) => {
       const payload = JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8000,
+        stream: true,
         system: buildSystemPrompt(),
         messages: [{ role: 'user', content: userPrompt }]
       });
 
-      console.log('[API] Payload:', payload.length, 'bytes');
+      console.log('[API] Streaming request, payload:', payload.length, 'bytes');
+
+      // Set up SSE headers so browser receives tokens as they arrive
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
 
       const options = {
         hostname: 'api.anthropic.com',
@@ -109,53 +119,66 @@ const server = http.createServer((req, res) => {
       };
 
       const apiReq = https.request(options, apiRes => {
-        const apiChunks = [];
-        apiRes.on('data', chunk => apiChunks.push(chunk));
-        apiRes.on('end', () => {
-          const raw = Buffer.concat(apiChunks).toString('utf8');
-          console.log('[API] Status:', apiRes.statusCode, '| Size:', raw.length);
+        console.log('[API] Stream status:', apiRes.statusCode);
 
-          if (apiRes.statusCode !== 200) {
+        if (apiRes.statusCode !== 200) {
+          const errChunks = [];
+          apiRes.on('data', c => errChunks.push(c));
+          apiRes.on('end', () => {
             let errMsg = 'Anthropic error ' + apiRes.statusCode;
-            try { errMsg = JSON.parse(raw).error?.message || errMsg; } catch (_) {}
-            console.error('[API] Error:', errMsg);
-            sendJSON(res, 502, { error: errMsg });
-            return;
+            try { errMsg = JSON.parse(Buffer.concat(errChunks).toString()).error?.message || errMsg; } catch (_) {}
+            res.write('event: error\ndata: ' + JSON.stringify({ error: errMsg }) + '\n\n');
+            res.end();
+          });
+          return;
+        }
+
+        let buffer = '';
+
+        apiRes.on('data', chunk => {
+          const lines = chunk.toString().split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const evt = JSON.parse(data);
+              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                const token = evt.delta.text;
+                buffer += token;
+                // Forward each token to the browser
+                res.write('event: token\ndata: ' + JSON.stringify({ token }) + '\n\n');
+              }
+              if (evt.type === 'message_stop') {
+                // Full response complete — parse and send structured result
+                const clean = buffer.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                try {
+                  const result = JSON.parse(clean);
+                  result.analysis = result.analysis || [];
+                  result.architecture = result.architecture || { arc: '', slides: [] };
+                  result.architecture.slides = result.architecture.slides || [];
+                  result.gaps = result.gaps || [];
+                  console.log('[API] Stream complete — analysis:', result.analysis.length, 'slides:', result.architecture.slides.length);
+                  res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
+                } catch (e) {
+                  console.error('[API] JSON parse error:', e.message, '| tail:', clean.slice(-200));
+                  res.write('event: error\ndata: ' + JSON.stringify({ error: 'Model returned malformed JSON: ' + e.message }) + '\n\n');
+                }
+                res.end();
+              }
+            } catch (_) {}
           }
+        });
 
-          let anthropicParsed;
-          try { anthropicParsed = JSON.parse(raw); }
-          catch (e) { sendJSON(res, 500, { error: 'Anthropic returned invalid JSON' }); return; }
-
-          const text = (anthropicParsed.content || []).map(b => b.text || '').join('');
-          if (!text) { sendJSON(res, 500, { error: 'No text content returned' }); return; }
-
-          // Strip any markdown fences
-          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-          
-          let result;
-          try { result = JSON.parse(clean); }
-          catch (e) {
-            console.error('[API] JSON parse error:', e.message);
-            console.error('[API] Response tail (last 200 chars):', clean.slice(-200));
-            sendJSON(res, 500, { error: 'Model returned malformed JSON: ' + e.message });
-            return;
-          }
-
-          // Ensure all keys exist
-          result.analysis = result.analysis || [];
-          result.architecture = result.architecture || { arc: '', slides: [] };
-          result.architecture.slides = result.architecture.slides || [];
-          result.gaps = result.gaps || [];
-
-          console.log('[API] OK — analysis:', result.analysis.length, 'slides:', result.architecture.slides.length);
-          sendJSON(res, 200, { result });
+        apiRes.on('error', e => {
+          res.write('event: error\ndata: ' + JSON.stringify({ error: e.message }) + '\n\n');
+          res.end();
         });
       });
 
       apiReq.on('error', e => {
-        console.error('[API] Request error:', e.message);
-        sendJSON(res, 502, { error: 'Cannot reach Anthropic: ' + e.message });
+        res.write('event: error\ndata: ' + JSON.stringify({ error: 'Cannot reach Anthropic: ' + e.message }) + '\n\n');
+        res.end();
       });
 
       apiReq.write(payload);
