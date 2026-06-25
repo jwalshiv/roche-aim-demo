@@ -39,7 +39,9 @@ RULES:
 - priority must be "lead", "support", "bridge", or "close"
 - Cite every sentence [CM-XX] if sourced from library, [AI] if you wrote it
 - Every headline must have a citation tag
-- Never invent claims not in the library
+- Never invent claims, statistics, or differentiators not in the library
+- CRITICAL: Every slide or ad unit must contain at least one sentence sourced verbatim or near-verbatim from the approved library, cited [CM-XX]. [AI] is permitted only for headlines, transitions, and structural framing — never for substantive claims.
+- If you cannot find relevant approved content for a section, do NOT fill it with AI-generated claims. Instead, omit that section and add it to the gaps array with an explanation.
 
 JSON structure (follow exactly):
 {
