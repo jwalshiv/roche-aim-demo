@@ -316,10 +316,10 @@ function savePool() {
 
 function updatePoolBadge() {
   const pending = candidatePool.filter(c => c.status === 'pending').length;
-  const btn = document.getElementById('poolNavBtn');
-  const count = document.getElementById('poolCount');
-  count.textContent = pending;
-  btn.classList.toggle('has-items', pending > 0);
+  const countEl = document.getElementById('poolCount');
+  const tabPool = document.getElementById('tabPool');
+  if (countEl) countEl.textContent = pending;
+  if (tabPool) tabPool.classList.toggle('has-pending', pending > 0);
 }
 
 function addToPool(text, type, context, suggestedTags) {
@@ -560,8 +560,11 @@ async function runAgent() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: buildSystemPrompt(),
-        userPrompt: userPrompt
+        deliverable: deliverableLabel,
+        audience: audienceLabel,
+        topic: topicLabel,
+        disease: diseaseLabel,
+        values: valuesLabel
       })
     });
     if (!response.ok) {
@@ -604,27 +607,23 @@ async function runAgent() {
     valuesEl.value !== 'none' ? valuesEl.value : null
   ].filter(Boolean);
 
-  (result.architecture || {}).slides && result.architecture.slides.forEach(slide => {
-    // Flag AI headlines
-    if (slide.headline_source === 'ai' && slide.headline) {
-      addToPool(slide.headline, 'headline', currentContext, [...suggestedTags]);
-    }
-    // Flag AI body sentences
-    if (slide.copy) {
-      const sentences = slide.copy.split(/(?<=[.!?])\s+/);
-      let buffer = '';
-      sentences.forEach(s => {
-        buffer += (buffer ? ' ' : '') + s;
-        if (/\[AI\]/.test(s)) {
-          const clean = buffer.replace(/\[AI\]/g, '').replace(/\[CM-\d+\]/g, '').trim();
-          if (clean.length > 20) addToPool(clean, 'copy', currentContext, [...suggestedTags]);
-          buffer = '';
-        } else if (/\[CM-\d+\]/.test(s)) {
-          buffer = '';
-        }
-      });
-    }
-  });
+  try {
+    (result.architecture.slides || []).forEach(function(slide) {
+      if (slide.headline_source === 'ai' && slide.headline) {
+        addToPool(slide.headline, 'headline', currentContext, suggestedTags.slice());
+      }
+      if (slide.copy) {
+        var parts = slide.copy.split('[AI]');
+        parts.forEach(function(part) {
+          var clean = part.replace(/\[CM-\d+\]/g, '').replace(/[.!?\s]+$/, '').trim();
+          var lastSentence = clean.split(/[.!?]/).filter(function(s){ return s.trim().length > 20; }).pop();
+          if (lastSentence) addToPool(lastSentence.trim(), 'copy', currentContext, suggestedTags.slice());
+        });
+      }
+    });
+  } catch(flagErr) {
+    console.warn('Pool flagging error (non-fatal):', flagErr.message);
+  }
 
   let priorityMap;
   try {
