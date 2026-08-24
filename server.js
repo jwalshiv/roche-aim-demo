@@ -13,47 +13,87 @@ if (!API_KEY) {
 
 const HTML = fs.readFileSync(path.join(__dirname, 'roche-app.html'), 'utf8');
 
+const PROOF_URL = 'https://roche-aim-infographic.onrender.com/';
+
+// Reference database: verbatim content from the Global Customer Relationship
+// Study 2025 deck only. Every "text" field must be reproduced exactly as
+// written in the source deck — no paraphrasing, no rewriting.
 const MESSAGE_LIBRARY = {
-  "CM-09": { headline: "The only company with Pharma and Dx under one roof", support: "The integration of Roche Pharma and Roche Diagnostics is not structural convenience; it is a unique strategic asset. Insights from one division accelerate breakthroughs in the other, creating a flywheel no standalone diagnostics company can replicate.", role: "Uniquely ownable. Most powerful in oncology, neurology, and companion diagnostics contexts.", proof: "Companion diagnostics for 60%+ of oncology decisions · Pharma + Dx co-development pipeline including SBX and CDx", tags: ["c-suite","lab-director","oncology","neurology","pharma-dx-integration","collaborative-innovation"] },
-  "CM-10": { headline: "We co-create with the people who use our solutions", support: "Our innovations emerge from deep collaboration with clinicians, lab scientists, hospital systems, universities, and biotech partners — not from assumptions made in isolation. The best ideas come from inside the lab, and we listen.", role: "Repositions Roche as a genuine partner that designs with customers, not for them.", proof: "20+ AI algorithm partners in navify open environment · 133+ partnerships", tags: ["clinician","co-creation","collaborative-innovation","ai-digital","neurology","oncology"] },
-  "CM-11": { headline: "We collaborate with 250+ external partners because no one has all the answers", support: "Innovation at the pace healthcare demands requires us to reach beyond our own walls. Through alliances with universities, health systems, biotech firms, and AI companies, we stay connected to the leading edge of global science.", role: "Expands the collaboration message to the wider partner network.", proof: "250+ external R&D alliances · 133 active in-licensing agreements · 327 active out-licensing agreements", tags: ["c-suite","ecosystem","collaborative-innovation","ai-digital","partner-ecosystem"] },
-  "CM-12": { headline: "Diverse perspectives are how we find answers nobody else is looking for", support: "Healthcare is global, its challenges are varied, and its solutions must reflect that. We deliberately bring together different disciplines, geographies, and lived experiences.", role: "Brings the people and culture dimension into the innovation narrative.", proof: "~40,000 employees in 100+ countries · Global Access programs in cervical cancer and infectious disease", tags: ["c-suite","clinician","collaborative-innovation","global-access","sustainability"] },
-  "CM-13": { headline: "One platform, every dimension of the lab", support: "From core lab automation to molecular diagnostics, digital pathology, near-patient care, and data intelligence — Roche Diagnostics offers an integrated ecosystem that no patchwork of point solutions can match.", role: "Answers the C-suite question about consolidation risk and TCO.", proof: ">100,000 installed instruments · >5,000 lab & POC software deployments", tags: ["c-suite","lab-director","economic-buyer","ecosystem","breadth-platform","ai-digital"] },
-  "CM-14": { headline: "Innovation that works at scale — and in the smallest lab", support: "Whether you are a national reference laboratory or a regional hospital, our solutions are designed to perform with the same rigour.", role: "Counters the perception that Roche innovation is only for large institutions.", proof: "LumiraDx POC platform · HPV Global Access Program · cobas vital for smaller labs", tags: ["lab-director","lab-manager","breadth-platform","global-access","sustainability"] },
-  "CM-15": { headline: "A portfolio this broad means fewer gaps in your care pathway", support: "With solutions spanning oncology, neurology, infectious disease, cardiometabolic, women's health, and diabetes management, Roche covers the disease areas that matter most.", role: "Reframes portfolio breadth as a clinical care continuity argument.", proof: "Oncology · Neurology · Infectious disease · Cardiometabolic · Women's health · >500 assays", tags: ["c-suite","lab-director","breadth-platform","neurology","oncology"] },
-  "CM-16": { headline: "Consolidating to Roche is a decision that compounds in value over time", support: "Every new Roche solution you add connects to what you already have. Our open, integrated architecture means moving from one instrument to a full ecosystem is a compounding return on a single strategic decision.", role: "Reframes consolidation not as vendor lock-in but as a compounding investment.", proof: "cobas ultra extensible platform · navify modular suite · >6,500 navify customers", tags: ["economic-buyer","lab-director","tco","ecosystem","breadth-platform"] }
+  "CRR-01": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6", buyingInfluence: ["clinical","financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-02": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["operational-excellence-uptime","communication-transparency"] },
+  "CRR-03": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9", buyingInfluence: ["clinical"], customerChallenge: ["product-technical"] },
+  "CRR-04": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9", buyingInfluence: ["clinical","financial"], customerChallenge: ["product-technical"] },
+  "CRR-05": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11", buyingInfluence: ["operational","financial"], customerChallenge: ["communication-transparency"] },
+  "CRR-06": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-07": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-08": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-09": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
+  "CRR-10": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-11": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-12": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19", buyingInfluence: ["operational","clinical"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-13": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership","product-technical"] },
+  "CRR-14": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","access-to-innovation"] },
+  "CRR-15": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-16": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
+
+  "CRR-17": { type: "support", text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote", buyingInfluence: ["clinical"], customerChallenge: ["strategic-partnership","product-technical"] },
+  "CRR-18": { type: "support", text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-19": { type: "support", text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-20": { type: "support", text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7", buyingInfluence: ["clinical","operational"], customerChallenge: ["product-technical","strategic-partnership"] },
+  "CRR-21": { type: "support", text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-22": { type: "support", text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","access-to-innovation"] },
+  "CRR-23": { type: "support", text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote", buyingInfluence: ["operational"], customerChallenge: ["barriers-to-digital-adoption","managing-staff-shortages"] },
+  "CRR-24": { type: "support", text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions"] },
+  "CRR-25": { type: "support", text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs", buyingInfluence: ["operational"], customerChallenge: ["automation-digitalization","managing-staff-shortages"] },
+  "CRR-26": { type: "support", text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-27": { type: "support", text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","managing-staff-shortages"] },
+  "CRR-28": { type: "support", text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
+  "CRR-29": { type: "support", text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","reagent-waste-packaging"] },
+  "CRR-30": { type: "support", text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","cost-effective-right-sized-solutions"] },
+  "CRR-31": { type: "support", text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-32": { type: "support", text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17", buyingInfluence: ["financial","operational"], customerChallenge: ["automation-digitalization","cost-effective-right-sized-solutions"] },
+  "CRR-33": { type: "support", text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["access-to-innovation"] },
+  "CRR-34": { type: "support", text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","commercial-procurement-flexibility"] },
+  "CRR-35": { type: "support", text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
+  "CRR-36": { type: "support", text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21", buyingInfluence: ["financial"], customerChallenge: ["commercial-procurement-flexibility"] },
+  "CRR-37": { type: "support", text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22", buyingInfluence: ["operational"], customerChallenge: ["infrastructure-space-constraints"] },
+  "CRR-38": { type: "support", text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23", buyingInfluence: ["operational"], customerChallenge: ["training-expertise","managing-staff-shortages"] },
+  "CRR-39": { type: "support", text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions","reagent-waste-packaging"] },
+  "CRR-40": { type: "support", text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability"] },
+  "CRR-41": { type: "support", text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","communication-transparency"] },
+  "CRR-42": { type: "support", text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27", buyingInfluence: ["financial","operational"], customerChallenge: ["strategic-partnership"] },
+  "CRR-43": { type: "support", text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote", buyingInfluence: ["operational"], customerChallenge: ["strategic-partnership"] }
 };
 
-function buildSystemPrompt() {
-  const library = Object.entries(MESSAGE_LIBRARY).map(([id, msg]) =>
-    '[' + id + ']\nHeadline: "' + msg.headline + '"\nSupport: "' + msg.support + '"\nRole: ' + msg.role + '\nProof: ' + msg.proof + '\nTags: ' + msg.tags.join(', ')
-  ).join('\n---\n');
-
-  return `You are a senior brand strategist at Roche Diagnostics with the AIM Framework message library.
-
-Select the most relevant messages, explain WHY each fits this specific audience and context, architect a narrative sequence, draft copy with inline citations, identify gaps.
-
-RULES:
-- Return ONLY valid JSON, no markdown fences, no preamble
-- headline_source must be "library" or "ai"
-- priority must be "lead", "support", "bridge", or "close"
-- Cite every sentence [CM-XX] if sourced from library, [AI] if you wrote it
-- Every headline must have a citation tag
-- Never invent claims, statistics, or differentiators not in the library
-- CRITICAL: Every slide or ad unit must contain at least one sentence sourced verbatim or near-verbatim from the approved library, cited [CM-XX]. [AI] is permitted only for headlines, transitions, and structural framing — never for substantive claims.
-- If you cannot find relevant approved content for a section, do NOT fill it with AI-generated claims. Instead, omit that section and add it to the gaps array with an explanation.
-
-JSON structure (follow exactly):
-{
-  "analysis": [{"id":"CM-XX","headline":"...","rationale":"...","priority":"lead"}],
-  "architecture": {
-    "arc": "one sentence narrative arc",
-    "slides": [{"position":1,"label":"...","headline":"...","headline_source":"ai","copy":"Full body copy with [CM-XX] and [AI] citations inline after each sentence.","visual_note":"visual direction note","sources":["CM-XX"]}]
-  },
-  "gaps": [{"title":"...","description":"..."}]
+function contentTypeKey(label) {
+  const s = (label || '').toLowerCase();
+  if (s.indexOf('proof') !== -1) return 'proof';
+  if (s.indexOf('support') !== -1) return 'support';
+  return 'lead';
 }
 
-MESSAGE LIBRARY:
+function buildSystemPrompt(typeKey) {
+  const entries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === typeKey);
+  const library = entries.map(([id, m]) =>
+    '[' + id + ']\nText: "' + m.text + '"\nSource: ' + m.source + '\nBuying influence: ' + m.buyingInfluence.join(', ') + '\nCustomer challenge: ' + m.customerChallenge.join(', ')
+  ).join('\n---\n');
+
+  return `You are retrieving content for Roche Diagnostics from a single approved source: the Global Customer Relationship Study 2025 deck. This is a verbatim-retrieval task, not a writing task.
+
+ABSOLUTE RULES:
+- You may ONLY reproduce the "Text" field of library entries below, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
+- Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
+- Select entries whose buying influence and/or customer challenge tags best match the requested context. If several entries fit, prefer the closer match.
+- If nothing in the library reasonably matches the requested buying influence / customer challenge / disease / portfolio / product combination, do not force a match — report it in "gaps" instead.
+- Return ONLY valid JSON, no markdown fences, no preamble.
+
+JSON structure:
+{
+  "selections": [ { "id": "CRR-XX", "text": "exact verbatim text copied from the entry, unchanged", "source": "exact source field copied from the entry" } ],
+  "gaps": [ { "title": "short title", "description": "what the requested context needed that this library does not cover" } ]
+}
+
+LIBRARY (only entries of the requested content type are listed \u2014 select only from these):
 ${library}`;
 }
 
@@ -77,6 +117,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Streaming endpoint
   if (req.method === 'POST' && reqPath === '/api/generate') {
     const chunks = [];
     req.on('data', chunk => chunks.push(chunk));
@@ -85,16 +126,45 @@ const server = http.createServer((req, res) => {
       try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
       catch (e) { sendJSON(res, 400, { error: 'Invalid JSON: ' + e.message }); return; }
 
-      const userPrompt = 'Generate a ' + parsed.deliverable + ' for:\n- Buying influence: ' + parsed.audience + '\n- Topic: ' + parsed.topic + '\n- Disease area: ' + parsed.disease + '\n- Values layer: ' + parsed.values + '\n\nAnalyse the full library, select the best messages with clear reasoning, architect a narrative sequence for this specific audience, draft full body copy with a citation on every sentence and every headline, and identify content gaps.';
+      const typeKey = contentTypeKey(parsed.contentType);
+
+      // Set up SSE headers so browser receives tokens/result the same way regardless of path
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
+
+      // Proof is a fixed bridge to the infographic, not generated or selected from
+      // the library, and is never passed through the model.
+      if (typeKey === 'proof') {
+        const result = {
+          contentType: 'proof',
+          proof: {
+            text: 'Full Global Customer Relationship Study 2025 findings, presented as an interactive infographic.',
+            url: PROOF_URL
+          },
+          selections: [],
+          gaps: []
+        };
+        res.write('event: token\ndata: ' + JSON.stringify({ token: '' }) + '\n\n');
+        res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
+        res.end();
+        return;
+      }
+
+      const userPrompt = 'Requested context:\n- Buying influence: ' + parsed.audience + '\n- Topics: ' + parsed.topics + '\n- Customer need: ' + parsed.customerNeed + '\n- Disease area: ' + parsed.disease + '\n- Portfolio: ' + parsed.portfolio + '\n- Product: ' + parsed.product + '\n- Content type requested: ' + parsed.contentType + '\n\nSelect the library entries (of the requested content type only) that best match this buying influence and customer need. Return them verbatim with their id and source. If nothing matches well, report the gap instead of forcing a selection.';
 
       const payload = JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
-        system: buildSystemPrompt(),
+        max_tokens: 4000,
+        stream: true,
+        system: buildSystemPrompt(typeKey),
         messages: [{ role: 'user', content: userPrompt }]
       });
 
-      console.log('[API] Payload:', payload.length, 'bytes');
+      console.log('[API] Streaming request (' + typeKey + '), payload:', payload.length, 'bytes');
 
       const options = {
         hostname: 'api.anthropic.com',
@@ -109,53 +179,68 @@ const server = http.createServer((req, res) => {
       };
 
       const apiReq = https.request(options, apiRes => {
-        const apiChunks = [];
-        apiRes.on('data', chunk => apiChunks.push(chunk));
-        apiRes.on('end', () => {
-          const raw = Buffer.concat(apiChunks).toString('utf8');
-          console.log('[API] Status:', apiRes.statusCode, '| Size:', raw.length);
+        console.log('[API] Stream status:', apiRes.statusCode);
 
-          if (apiRes.statusCode !== 200) {
+        if (apiRes.statusCode !== 200) {
+          const errChunks = [];
+          apiRes.on('data', c => errChunks.push(c));
+          apiRes.on('end', () => {
             let errMsg = 'Anthropic error ' + apiRes.statusCode;
-            try { errMsg = JSON.parse(raw).error?.message || errMsg; } catch (_) {}
-            console.error('[API] Error:', errMsg);
-            sendJSON(res, 502, { error: errMsg });
-            return;
+            try { errMsg = JSON.parse(Buffer.concat(errChunks).toString()).error?.message || errMsg; } catch (_) {}
+            res.write('event: error\ndata: ' + JSON.stringify({ error: errMsg }) + '\n\n');
+            res.end();
+          });
+          return;
+        }
+
+        let buffer = '';
+
+        apiRes.on('data', chunk => {
+          const lines = chunk.toString().split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const evt = JSON.parse(data);
+              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                const token = evt.delta.text;
+                buffer += token;
+                res.write('event: token\ndata: ' + JSON.stringify({ token }) + '\n\n');
+              }
+              if (evt.type === 'message_stop') {
+                const clean = buffer.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                try {
+                  const result = JSON.parse(clean);
+                  result.contentType = typeKey;
+                  result.selections = (result.selections || []).map(function(sel) {
+                    // Enforce verbatim: always serve the library's own text/source for the
+                    // matched id rather than trusting whatever the model echoed back.
+                    const lib = MESSAGE_LIBRARY[sel.id];
+                    return lib ? { id: sel.id, text: lib.text, source: lib.source } : sel;
+                  }).filter(function(sel) { return MESSAGE_LIBRARY[sel.id]; });
+                  result.gaps = result.gaps || [];
+                  console.log('[API] Stream complete — selections:', result.selections.length, 'gaps:', result.gaps.length);
+                  res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
+                } catch (e) {
+                  console.error('[API] JSON parse error:', e.message, '| tail:', clean.slice(-200));
+                  res.write('event: error\ndata: ' + JSON.stringify({ error: 'Model returned malformed JSON: ' + e.message }) + '\n\n');
+                }
+                res.end();
+              }
+            } catch (_) {}
           }
+        });
 
-          let anthropicParsed;
-          try { anthropicParsed = JSON.parse(raw); }
-          catch (e) { sendJSON(res, 500, { error: 'Anthropic returned invalid JSON' }); return; }
-
-          const text = (anthropicParsed.content || []).map(b => b.text || '').join('');
-          if (!text) { sendJSON(res, 500, { error: 'No text content returned' }); return; }
-
-          // Strip any markdown fences
-          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-          
-          let result;
-          try { result = JSON.parse(clean); }
-          catch (e) {
-            console.error('[API] JSON parse error:', e.message);
-            console.error('[API] Response tail (last 200 chars):', clean.slice(-200));
-            sendJSON(res, 500, { error: 'Model returned malformed JSON: ' + e.message });
-            return;
-          }
-
-          // Ensure all keys exist
-          result.analysis = result.analysis || [];
-          result.architecture = result.architecture || { arc: '', slides: [] };
-          result.architecture.slides = result.architecture.slides || [];
-          result.gaps = result.gaps || [];
-
-          console.log('[API] OK — analysis:', result.analysis.length, 'slides:', result.architecture.slides.length);
-          sendJSON(res, 200, { result });
+        apiRes.on('error', e => {
+          res.write('event: error\ndata: ' + JSON.stringify({ error: e.message }) + '\n\n');
+          res.end();
         });
       });
 
       apiReq.on('error', e => {
-        console.error('[API] Request error:', e.message);
-        sendJSON(res, 502, { error: 'Cannot reach Anthropic: ' + e.message });
+        res.write('event: error\ndata: ' + JSON.stringify({ error: 'Cannot reach Anthropic: ' + e.message }) + '\n\n');
+        res.end();
       });
 
       apiReq.write(payload);
