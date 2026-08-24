@@ -122,11 +122,6 @@
   .gap-title { font-size: 12px; font-weight: 600; color: var(--amber); letter-spacing: 0.04em; margin-bottom: 4px; }
   .gap-text { font-size: 13px; color: #5A3D00; line-height: 1.6; }
 
-  /* Internal-facing statements — visually distinct so they're never mistaken for copy-ready output */
-  .internal-note-caption { font-size: 12px; color: #8A5A00; background: var(--amber-light); border: 1px solid var(--amber-border); border-radius: 6px; padding: 8px 12px; margin-bottom: 4px; }
-  .internal-note-card { border: 1px dashed var(--amber-border); border-radius: 8px; padding: 16px 18px; background: #FFFDF7; display: flex; flex-direction: column; gap: 8px; }
-  .internal-note-card .cluster-headline { color: #5A3D00; font-style: italic; }
-
   /* Loading */
   .loading-wrap { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
   .thinking-step { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--warm-pale); opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.4s; }
@@ -898,38 +893,13 @@ async function runAgent() {
     outputContent.appendChild(block);
   });
 
-  // Relevant internal-facing statements — useful context, never customer-facing.
-  // Rendered separately, styled distinctly, and never added to the candidate pool.
-  if ((result.internalNotes || []).length > 0) {
-    const d1 = document.createElement('hr'); d1.className = 'divider';
-    outputContent.appendChild(d1);
-    const internalBlock = document.createElement('div');
-    internalBlock.className = 'step-block';
-    internalBlock.innerHTML =
-      '<div class="step-heading"><div class="step-num">' + (groupOrder.length + 1) + '</div><div class="step-title">Relevant internal-facing statements</div></div>' +
-      '<div class="internal-note-caption">For internal context only \u2014 useful background, but should never be copied into a customer-facing email, deck, or ad.</div>';
-
-    result.internalNotes.forEach(function(note) {
-      const pageMatch = /Slide (\d+)/.exec(note.source || '');
-      const idHtml = pageMatch
-        ? '<a class="cluster-msg-id" href="/reference-deck.pdf#page=' + pageMatch[1] + '" onclick="openPdfViewer(\'/reference-deck.pdf\', ' + pageMatch[1] + ', \'Global Customer Relationship Study 2025\'); return false;" title="' + (note.id || '') + '">CRR-Page ' + pageMatch[1] + '</a>'
-        : '<div class="cluster-msg-id">' + (note.id || '') + '</div>';
-      const card = document.createElement('div');
-      card.className = 'internal-note-card';
-      card.innerHTML = '<div class="cluster-top"><div class="cluster-headline">' + (note.text || '') + '</div>' + idHtml + '</div>';
-      internalBlock.appendChild(card);
-    });
-
-    outputContent.appendChild(internalBlock);
-  }
-
   // Gap report
   if ((result.gaps || []).length > 0) {
     const d2 = document.createElement('hr'); d2.className = 'divider';
     outputContent.appendChild(d2);
     const gapBlock = document.createElement('div');
     gapBlock.className = 'step-block';
-    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">' + (groupOrder.length + ((result.internalNotes||[]).length > 0 ? 2 : 1)) + '</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
+    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">' + (groupOrder.length + 1) + '</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
     result.gaps.forEach(gap => {
       const el = document.createElement('div');
       el.className = 'gap-card';
