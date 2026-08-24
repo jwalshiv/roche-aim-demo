@@ -88,6 +88,8 @@
   .cluster-card { border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; background: var(--white); display: flex; flex-direction: column; gap: 10px; }
   .cluster-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .cluster-msg-id { font-size: 10px; font-weight: 600; font-family: 'Courier New', monospace; color: var(--blue); background: var(--blue-light); padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+  a.cluster-msg-id { text-decoration: none; cursor: pointer; }
+  a.cluster-msg-id:hover { text-decoration: underline; }
   .cluster-headline { font-size: 15px; font-weight: 600; color: var(--warm-dark); line-height: 1.35; }
   .cluster-rationale { font-size: 13px; color: var(--warm-mid); line-height: 1.65; }
   .cluster-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--warm-ghost); }
@@ -356,7 +358,7 @@
   <aside class="panel-left" id="panelLeft">
     <div>
       <p class="panel-section-label">Query builder</p>
-      <p class="panel-intro">Select your audience, topic, and context. The agent reads the full message library, reasons about narrative fit, and returns a sequenced brief — not a tag-count ranking.</p>
+      <p class="panel-intro">Select your audience, topic, and context. The agent reads the full message library, reasons about narrative fit, and returns relevant messaging.</p>
     </div>
     <div class="field-group">
       <label class="field-label" for="deliverable">Deliverable type</label>
@@ -490,49 +492,49 @@
 
 <script>
 const MESSAGE_LIBRARY = {
-  "CRR-01": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6" },
-  "CRR-02": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7" },
-  "CRR-03": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9" },
-  "CRR-04": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9" },
-  "CRR-05": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11" },
-  "CRR-06": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12" },
-  "CRR-07": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12" },
-  "CRR-08": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14" },
-  "CRR-09": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15" },
-  "CRR-10": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16" },
-  "CRR-11": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17" },
-  "CRR-12": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19" },
-  "CRR-13": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34" },
-  "CRR-14": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34" },
-  "CRR-15": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34" },
-  "CRR-16": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34" },
-  "CRR-17": { type: "support", text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote" },
-  "CRR-18": { type: "support", text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote" },
-  "CRR-19": { type: "support", text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote" },
-  "CRR-20": { type: "support", text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7" },
-  "CRR-21": { type: "support", text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7" },
-  "CRR-22": { type: "support", text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote" },
-  "CRR-23": { type: "support", text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote" },
-  "CRR-24": { type: "support", text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs" },
-  "CRR-25": { type: "support", text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs" },
-  "CRR-26": { type: "support", text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs" },
-  "CRR-27": { type: "support", text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs" },
-  "CRR-28": { type: "support", text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15" },
-  "CRR-29": { type: "support", text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15" },
-  "CRR-30": { type: "support", text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives" },
-  "CRR-31": { type: "support", text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives" },
-  "CRR-32": { type: "support", text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17" },
-  "CRR-33": { type: "support", text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17" },
-  "CRR-34": { type: "support", text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17" },
-  "CRR-35": { type: "support", text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote" },
-  "CRR-36": { type: "support", text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21" },
-  "CRR-37": { type: "support", text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22" },
-  "CRR-38": { type: "support", text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23" },
-  "CRR-39": { type: "support", text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24" },
-  "CRR-40": { type: "support", text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25" },
-  "CRR-41": { type: "support", text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26" },
-  "CRR-42": { type: "support", text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27" },
-  "CRR-43": { type: "support", text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote" }
+  "CRR-06a": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6" },
+  "CRR-07a": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7" },
+  "CRR-09a": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9" },
+  "CRR-09b": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9" },
+  "CRR-11a": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11" },
+  "CRR-12a": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12" },
+  "CRR-12b": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12" },
+  "CRR-14a": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14" },
+  "CRR-15a": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15" },
+  "CRR-16a": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16" },
+  "CRR-17a": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17" },
+  "CRR-19": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19" },
+  "CRR-34a": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34" },
+  "CRR-34b": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34" },
+  "CRR-34c": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34" },
+  "CRR-34d": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34" },
+  "CRR-06b": { type: "support", text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote" },
+  "CRR-06c": { type: "support", text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote" },
+  "CRR-06d": { type: "support", text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote" },
+  "CRR-07b": { type: "support", text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7" },
+  "CRR-07c": { type: "support", text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7" },
+  "CRR-11b": { type: "support", text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote" },
+  "CRR-12c": { type: "support", text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote" },
+  "CRR-14b": { type: "support", text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs" },
+  "CRR-14c": { type: "support", text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs" },
+  "CRR-14d": { type: "support", text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs" },
+  "CRR-14e": { type: "support", text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs" },
+  "CRR-15b": { type: "support", text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15" },
+  "CRR-15c": { type: "support", text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15" },
+  "CRR-16b": { type: "support", text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives" },
+  "CRR-16c": { type: "support", text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives" },
+  "CRR-17b": { type: "support", text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17" },
+  "CRR-17c": { type: "support", text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17" },
+  "CRR-17d": { type: "support", text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17" },
+  "CRR-20": { type: "support", text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote" },
+  "CRR-21": { type: "support", text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21" },
+  "CRR-22": { type: "support", text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22" },
+  "CRR-23": { type: "support", text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23" },
+  "CRR-24": { type: "support", text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24" },
+  "CRR-25": { type: "support", text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25" },
+  "CRR-26": { type: "support", text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26" },
+  "CRR-27a": { type: "support", text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27" },
+  "CRR-27b": { type: "support", text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote" }
 };
 
 // Candidate pool — persists across sessions
@@ -881,11 +883,14 @@ async function runAgent() {
     block.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">' + typeLabel + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
 
     (result.selections || []).forEach(function(sel) {
+      const pageMatch = /Slide (\d+)/.exec(sel.source || '');
+      const idHtml = pageMatch
+        ? '<a class="cluster-msg-id" href="/reference-deck.pdf#page=' + pageMatch[1] + '" target="_blank" rel="noopener" title="' + (sel.source || '') + '">' + (sel.id || '') + '</a>'
+        : '<div class="cluster-msg-id">' + (sel.id || '') + '</div>';
       const card = document.createElement('div');
       card.className = 'cluster-card';
       card.innerHTML =
-        '<div class="cluster-top"><div class="cluster-headline">' + (sel.text || '') + '</div><div class="cluster-msg-id">' + (sel.id || '') + '</div></div>' +
-        '<div class="cluster-meta"><span class="cluster-chip">' + (sel.source || '') + '</span></div>';
+        '<div class="cluster-top"><div class="cluster-headline">' + (sel.text || '') + '</div>' + idHtml + '</div>';
       block.appendChild(card);
 
       addToPool(sel.text, result.contentType === 'support' ? 'support' : 'lead', currentContext, suggestedTags.slice());
