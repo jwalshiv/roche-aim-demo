@@ -392,6 +392,7 @@
     <div class="field-group">
       <label class="field-label" for="topics">Topics</label>
       <select class="field-select" id="topics">
+        <option value="all" disabled>All</option>
         <option value="clinical" disabled>Clinical</option>
         <option value="innovation" selected>Innovation</option>
         <option value="collaboration" disabled>Collaboration</option>
@@ -402,7 +403,8 @@
     <div class="field-group">
       <label class="field-label" for="disease">Disease area</label>
       <select class="field-select" id="disease">
-        <option value="infectious-disease">Infectious Disease</option>
+        <option value="all" disabled>All</option>
+        <option value="infectious-disease" selected>Infectious Disease</option>
         <option value="neurology" disabled>Neurology</option>
         <option value="oncology" disabled>Oncology</option>
       </select>
@@ -410,6 +412,7 @@
     <div class="field-group">
       <label class="field-label" for="audience">Buying influence</label>
       <select class="field-select" id="audience">
+        <option value="all">All</option>
         <option value="operational">Operational</option>
         <option value="financial">Financial</option>
         <option value="clinical">Clinical</option>
@@ -418,6 +421,7 @@
     <div class="field-group">
       <label class="field-label" for="customerNeed">Customer challenge</label>
       <select class="field-select" id="customerNeed">
+        <option value="all">All</option>
         <option value="automation-digitalization">Automation &amp; Digitalization</option>
         <option value="managing-staff-shortages">Managing Staff Shortages</option>
         <option value="strategic-partnership">Strategic Partnership</option>
@@ -437,6 +441,7 @@
     <div class="field-group">
       <label class="field-label" for="portfolio">Portfolio</label>
       <select class="field-select" id="portfolio">
+        <option value="all">All</option>
         <option value="near-patient-care">Near Patient Care</option>
         <option value="molecular-lab">Molecular Lab</option>
         <option value="core-lab">Core Lab</option>
@@ -445,12 +450,14 @@
     <div class="field-group">
       <label class="field-label" for="product">Product</label>
       <select class="field-select" id="product">
+        <option value="all">All</option>
         <option value="cobas-liat">Cobas Liat</option>
       </select>
     </div>
     <div class="field-group">
       <label class="field-label" for="contentType">Content type</label>
       <select class="field-select" id="contentType">
+        <option value="all">All</option>
         <option value="lead-message">Lead Message</option>
         <option value="support">Support</option>
         <option value="proof">Proof</option>
@@ -851,12 +858,9 @@ async function runAgent() {
   try {
 
   const typeLabels = { lead: 'Lead messages', support: 'Support points', proof: 'Proof' };
-  const typeLabel = typeLabels[result.contentType] || 'Messages';
-  const block = document.createElement('div');
-  block.className = 'step-block';
-  block.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">' + typeLabel + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
+  const groupOrder = result.contentType === 'all' ? ['lead', 'support', 'proof'] : [result.contentType];
 
-  (result.selections || []).forEach(function(sel) {
+  function renderCard(sel, container) {
     const pageMatch = /Slide (\d+)/.exec(sel.source || '');
     const idHtml = pageMatch
       ? '<a class="cluster-msg-id" href="/reference-deck.pdf#page=' + pageMatch[1] + '" onclick="openPdfViewer(\'/reference-deck.pdf\', ' + pageMatch[1] + ', \'Global Customer Relationship Study 2025\'); return false;" title="' + (sel.id || '') + '">CRR-Page ' + pageMatch[1] + '</a>'
@@ -865,31 +869,27 @@ async function runAgent() {
     card.className = 'cluster-card';
     card.innerHTML =
       '<div class="cluster-top"><div class="cluster-headline">' + (sel.text || '') + '</div>' + idHtml + '</div>';
-    block.appendChild(card);
+    container.appendChild(card);
+    addToPool(sel.text, sel.type || result.contentType, currentContext, suggestedTags.slice());
+  }
 
-    addToPool(sel.text, result.contentType, currentContext, suggestedTags.slice());
+  groupOrder.forEach(function(groupType, i) {
+    const groupSelections = (result.selections || []).filter(function(sel) { return (sel.type || result.contentType) === groupType; });
+    const block = document.createElement('div');
+    block.className = 'step-block';
+    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
+
+    groupSelections.forEach(function(sel) { renderCard(sel, block); });
+
+    if (groupSelections.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'arc-note';
+      empty.textContent = 'No results.';
+      block.appendChild(empty);
+    }
+
+    outputContent.appendChild(block);
   });
-
-  // Proof always also includes the fixed infographic bridge, on top of any
-  // matched case-study entries above.
-  if (result.contentType === 'proof' && result.proof) {
-    const p = result.proof;
-    const card = document.createElement('div');
-    card.className = 'cluster-card';
-    card.innerHTML =
-      '<div class="cluster-top"><div class="cluster-headline">' + (p.text || '') + '</div></div>' +
-      '<div class="cluster-rationale"><a href="' + (p.url || '#') + '" target="_blank" rel="noopener">' + (p.url || '') + '</a></div>';
-    block.appendChild(card);
-  }
-
-  if ((result.selections || []).length === 0 && result.contentType !== 'proof') {
-    const empty = document.createElement('p');
-    empty.className = 'arc-note';
-    empty.textContent = 'No verbatim match found in the library for this combination \u2014 see gap report below.';
-    block.appendChild(empty);
-  }
-
-  outputContent.appendChild(block);
 
   // Gap report
   if ((result.gaps || []).length > 0) {
@@ -897,7 +897,7 @@ async function runAgent() {
     outputContent.appendChild(d2);
     const gapBlock = document.createElement('div');
     gapBlock.className = 'step-block';
-    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">2</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
+    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">' + (groupOrder.length + 1) + '</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
     result.gaps.forEach(gap => {
       const el = document.createElement('div');
       el.className = 'gap-card';
