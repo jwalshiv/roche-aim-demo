@@ -1,332 +1,1018 @@
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
 
-const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIM Framework — Messaging Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #007AC2; --blue-dark: #005A8E; --blue-deeper: #003D6B;
+    --blue-light: #E6F4FB; --blue-mid: #CCE8F6;
+    --warm-dark: #2C2826; --warm-mid: #544F4F; --warm-light: #706B69;
+    --warm-pale: #C2BAB5; --warm-ghost: #F0EDE9;
+    --white: #FFFFFF; --surface: #FAFAF9; --border: #DDD8D4;
+    --green: #1A7A3A; --green-light: #E6F4EB;
+    --red: #B03020; --red-light: #FBEAE7;
+    --amber: #7A5000; --amber-light: #FFFBF0; --amber-border: #F5D99A;
+  }
+  html, body { height: 100%; font-family: 'Inter', -apple-system, sans-serif; background: var(--surface); color: var(--warm-dark); font-size: 15px; line-height: 1.6; }
 
-// Content selection below (Lead/Support/Proof/internal notes) is fully
-// deterministic and does NOT use this key. It's kept here, and callAnthropic()
-// below stays ready to call, for the planned generative-content feature —
-// e.g. drafting a cohesive customer email from a set of verbatim selections.
-// Retrieval must never depend on this; only a genuinely generative step should.
-if (!API_KEY) {
-  console.warn('WARNING: ANTHROPIC_API_KEY not set. Content selection will work fine without it, but any generative feature added later will fail until it is set.');
-}
+  /* Header */
+  header { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo-group { display: flex; align-items: center; gap: 16px; }
+  
+  .logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+  .logo-text .company { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: var(--blue); text-transform: uppercase; }
+  .logo-text .product { font-size: 11px; font-weight: 400; color: var(--warm-light); letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .header-badge { font-size: 11px; font-weight: 500; color: var(--blue); background: var(--blue-light); border: 1px solid var(--blue-mid); padding: 4px 10px; border-radius: 20px; letter-spacing: 0.04em; }
+  .header-tabs { display: flex; align-items: center; gap: 2px; background: var(--warm-ghost); border-radius: 8px; padding: 3px; }
+  .header-tab { font-size: 12px; font-weight: 500; font-family: inherit; color: var(--warm-light); background: transparent; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .header-tab:hover { color: var(--warm-dark); background: rgba(255,255,255,0.6); }
+  .header-tab.active { color: var(--warm-dark); background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .header-tab.active-amber { color: var(--amber); background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .pool-count { font-size: 10px; font-weight: 700; background: var(--amber); color: #fff; border-radius: 10px; padding: 1px 6px; display: none; }
+  .has-pending .pool-count { display: inline; }
 
-const HTML = fs.readFileSync(path.join(__dirname, 'roche-app.html'), 'utf8');
-const DECK_PDF_PATH = path.join(__dirname, 'reference-deck.pdf');
+  /* Layout */
+  .app-body { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 64px); }
 
-// Reference database: verbatim content from the Global Customer Relationship
-// Study 2025 deck only. Every "text" field must be reproduced exactly as
-// written in the source deck — no paraphrasing, no rewriting.
-//
-// Definitions:
-// - lead:    highest-level statement relevant to the query. Selected first,
-//            directly against the requested buying influence / customer need.
-// - support: detail that substantiates a lead message. Selected via
-//            relatedLead — i.e. only surfaced once a lead has been chosen,
-//            never independently tag-matched on its own.
-// - proof:   case studies / stories related to a lead + its support,
-//            selected the same way via relatedLead.
-//
-// NOTE: this library previously carried an "internal" vs "external" audience
-// tag per entry, attempting to auto-classify which statements were safe for
-// customer-facing use. That classification proved too unreliable to trust
-// and has been removed for now — curation of what belongs in this library at
-// all should happen when content is added, not via an in-app heuristic.
-const MESSAGE_LIBRARY = {
-  "CRR-06a": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6", buyingInfluence: ["clinical","financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-06e": { type: "lead", text: "Promoter accounts renew 90% more often than Detractors", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-06f": { type: "lead", text: "Promoter accounts have a 53% higher win rate than Detractors", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-06g": { type: "lead", text: "Promoter accounts generate ~58% of the revenue", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-07a": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["operational-excellence-uptime","communication-transparency"] },
-  "CRR-07d": { type: "lead", text: "88% Overall satisfaction with Roche", source: "Slide 7", buyingInfluence: ["clinical","operational","financial"], customerChallenge: ["product-technical"] },
-  "CRR-07e": { type: "lead", text: "89% Believe Roche is a true partner", source: "Slide 7", buyingInfluence: ["clinical","operational","financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-09a": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9", buyingInfluence: ["clinical"], customerChallenge: ["product-technical"] },
-  "CRR-09b": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9", buyingInfluence: ["clinical","financial"], customerChallenge: ["product-technical"] },
-  "CRR-11a": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11", buyingInfluence: ["operational","financial"], customerChallenge: ["communication-transparency"] },
-  "CRR-12a": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-12b": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-14a": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-15a": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
-  "CRR-16a": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-17a": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-19": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19", buyingInfluence: ["operational","clinical"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-34a": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership","product-technical"] },
-  "CRR-34b": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","access-to-innovation"] },
-  "CRR-34c": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-34d": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
+  /* Left panel */
+  .panel-left { background: var(--blue-deeper); padding: 36px 32px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+  .panel-section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+  .panel-intro { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+  .field-select { appearance: none; background: rgba(255,255,255,0.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; padding: 10px 36px 10px 14px; width: 100%; cursor: pointer; transition: border-color 0.15s; }
+  .field-select:focus { outline: none; border-color: rgba(255,255,255,0.4); }
+  .field-select:disabled { opacity: 0.4; cursor: not-allowed; color: rgba(255,255,255,0.5); }
+  .field-select option { background: var(--blue-deeper); color: #fff; }
+  .generate-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; }
+  .generate-btn:hover { background: var(--blue-dark); }
+  .generate-btn:active { transform: scale(0.98); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  "CRR-06b": { type: "support", relatedLead: ["CRR-06a"], text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote", buyingInfluence: ["clinical"], customerChallenge: ["strategic-partnership","product-technical"] },
-  "CRR-06c": { type: "support", relatedLead: ["CRR-06a"], text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-06d": { type: "support", relatedLead: ["CRR-06a"], text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-07b": { type: "support", relatedLead: ["CRR-07a"], text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7", buyingInfluence: ["clinical","operational"], customerChallenge: ["product-technical","strategic-partnership"] },
-  "CRR-07c": { type: "support", relatedLead: ["CRR-07a","CRR-34c"], text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-11b": { type: "support", relatedLead: ["CRR-11a"], text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","access-to-innovation"] },
-  "CRR-12c": { type: "support", relatedLead: ["CRR-12a","CRR-12b"], text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote", buyingInfluence: ["operational"], customerChallenge: ["barriers-to-digital-adoption","managing-staff-shortages"] },
-  "CRR-14b": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions"] },
-  "CRR-14c": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs", buyingInfluence: ["operational"], customerChallenge: ["automation-digitalization","managing-staff-shortages"] },
-  "CRR-14d": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-14e": { type: "support", relatedLead: ["CRR-14a","CRR-15a"], text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","managing-staff-shortages"] },
-  "CRR-15b": { type: "support", relatedLead: ["CRR-15a"], text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
-  "CRR-15c": { type: "support", relatedLead: ["CRR-15a","CRR-34d"], text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","reagent-waste-packaging"] },
-  "CRR-16b": { type: "support", relatedLead: ["CRR-16a"], text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","cost-effective-right-sized-solutions"] },
-  "CRR-16c": { type: "support", relatedLead: ["CRR-16a","CRR-34c"], text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-17b": { type: "support", relatedLead: ["CRR-17a"], text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17", buyingInfluence: ["financial","operational"], customerChallenge: ["automation-digitalization","cost-effective-right-sized-solutions"] },
-  "CRR-17c": { type: "support", relatedLead: ["CRR-17a","CRR-34b"], text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["access-to-innovation"] },
-  "CRR-17d": { type: "support", relatedLead: ["CRR-17a"], text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","commercial-procurement-flexibility"] },
-  "CRR-20": { type: "support", relatedLead: ["CRR-11a","CRR-34d"], text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
-  "CRR-21": { type: "support", relatedLead: ["CRR-17a","CRR-34b"], text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21", buyingInfluence: ["financial"], customerChallenge: ["commercial-procurement-flexibility"] },
-  "CRR-22": { type: "support", relatedLead: ["CRR-19"], text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22", buyingInfluence: ["operational"], customerChallenge: ["infrastructure-space-constraints"] },
-  "CRR-23": { type: "support", relatedLead: ["CRR-19"], text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23", buyingInfluence: ["operational"], customerChallenge: ["training-expertise","managing-staff-shortages"] },
-  "CRR-24": { type: "support", relatedLead: ["CRR-09a","CRR-19"], text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions","reagent-waste-packaging"] },
-  "CRR-25": { type: "support", relatedLead: ["CRR-15a","CRR-19"], text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability"] },
-  "CRR-26": { type: "support", relatedLead: ["CRR-15a","CRR-19"], text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","communication-transparency"] },
-  "CRR-27a": { type: "support", relatedLead: ["CRR-17a","CRR-19"], text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27", buyingInfluence: ["financial","operational"], customerChallenge: ["strategic-partnership"] },
-  "CRR-27b": { type: "support", relatedLead: ["CRR-17a","CRR-19"], text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote", buyingInfluence: ["operational"], customerChallenge: ["strategic-partnership"] },
+  /* Right panel */
+  .panel-right { padding: 40px 48px; display: flex; flex-direction: column; gap: 32px; }
 
-  "CRR-29a": { type: "proof", relatedLead: ["CRR-34c","CRR-34d"], text: "How China is using the CRR to shape their 2026 strategy", source: "Slide 29, case study" },
-  "CRR-29b": { type: "proof", relatedLead: ["CRR-34c","CRR-34d"], text: "289 responses, 97% response rate \u2014 among the highest globally", source: "Slide 29, case study" },
-  "CRR-29c": { type: "proof", relatedLead: ["CRR-34a","CRR-34d"], text: "Enhancing the TOP account experience through CRR helps better secure China's business", source: "Slide 29, quote \u2014 Carolin Wang, Service Strategy & Transformation, China" },
-  "CRR-31a": { type: "proof", relatedLead: ["CRR-34d","CRR-17a"], text: "How Brazil is using CRR to drive action", source: "Slide 31, case study" },
-  "CRR-31b": { type: "proof", relatedLead: ["CRR-34d"], text: "Brazil conducted in-depth CRR interviews with strategic accounts to assess relationships and capture key feedback.", source: "Slide 31, case study" },
-  "CRR-31c": { type: "proof", relatedLead: ["CRR-34c"], text: "They identified systemic challenges and defined high-level initiatives together with cross-functional leadership to drive improvements.", source: "Slide 31, case study" },
-  "CRR-31d": { type: "proof", relatedLead: ["CRR-17a","CRR-34b"], text: "Brazil developed account reports, collaborated with account teams to prioritize actions, and formalized objectives, impact, owners, and timelines.", source: "Slide 31, case study" },
-  "CRR-31e": { type: "proof", relatedLead: ["CRR-34d","CRR-17a"], text: "Finally, they shared findings and action plans with customers and validated next steps, which reinforced transparency and strengthened partnerships.", source: "Slide 31, case study" }
-};
+  /* Views */
+  .view { display: none; flex-direction: column; gap: 32px; }
+  .view.active { display: flex; }
 
-function contentTypeKey(label) {
-  const s = (label || '').toLowerCase();
-  if (s === 'all') return 'all';
-  if (s.indexOf('proof') !== -1) return 'proof';
-  if (s.indexOf('support') !== -1) return 'support';
-  return 'lead';
-}
+  /* Empty state */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 40px; gap: 16px; }
+  .empty-state h2 { font-size: 18px; font-weight: 500; color: var(--warm-light); }
+  .empty-state p { font-size: 14px; color: var(--warm-pale); max-width: 340px; line-height: 1.65; }
 
-function tagIncludes(arr, val) {
-  return Array.isArray(arr) && arr.indexOf(val) !== -1;
-}
+  /* Output header */
+  .output-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .output-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .output-query { font-size: 20px; font-weight: 500; color: var(--warm-dark); line-height: 1.4; }
+  .output-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .otag { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; border: 1px solid; }
+  .otag-blue { color: var(--blue); background: var(--blue-light); border-color: var(--blue-mid); }
+  .otag-gray { color: var(--warm-mid); background: var(--warm-ghost); border-color: var(--border); }
 
-// True intersection first: an entry must satisfy every filter that was
-// actually specified (not "All"). Only if that intersection is empty do we
-// fall back to a partial (any-one-filter) match, as a best-effort — never a
-// silent substitution of union logic for a real, specific query.
-function filterEntries(entries, audienceValue, needValue) {
-  const hasAudience = !!audienceValue && audienceValue !== 'all';
-  const hasNeed = !!needValue && needValue !== 'all';
+  /* Steps */
+  .step-block { display: flex; flex-direction: column; gap: 14px; }
+  .step-heading { display: flex; align-items: center; gap: 12px; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-light); border: 1px solid var(--blue-mid); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--blue); flex-shrink: 0; }
+  .step-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm-light); }
+  .arc-note { font-size: 13px; color: var(--warm-light); line-height: 1.65; font-style: italic; padding-left: 36px; }
 
-  if (!hasAudience && !hasNeed) {
-    return { matches: entries, mode: 'all' };
+  /* Cluster cards */
+  .cluster-card { border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; background: var(--white); display: flex; flex-direction: column; gap: 10px; }
+  .cluster-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .cluster-msg-id { font-size: 10px; font-weight: 600; font-family: 'Courier New', monospace; color: var(--blue); background: var(--blue-light); padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+  a.cluster-msg-id { text-decoration: none; cursor: pointer; }
+  a.cluster-msg-id:hover { text-decoration: underline; }
+  .cluster-headline { font-size: 15px; font-weight: 600; color: var(--warm-dark); line-height: 1.35; }
+  .cluster-rationale { font-size: 13px; color: var(--warm-mid); line-height: 1.65; }
+  .cluster-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--warm-ghost); }
+  .cluster-priority { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .priority-lead { color: #1A5C2A; background: #E6F4EB; }
+  .priority-support { color: #7A5000; background: #FFF3DB; }
+  .priority-bridge { color: #00587A; background: #E0F3FB; }
+  .priority-close { color: #4A1060; background: #F3E8FB; }
+  .cluster-chip { font-size: 11px; color: var(--warm-light); background: var(--warm-ghost); padding: 2px 8px; border-radius: 20px; }
+
+  /* Slide drafts */
+  .slide-draft { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--white); }
+  .slide-tab { display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: var(--warm-ghost); border-bottom: 1px solid var(--border); }
+  .slide-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
+  .slide-tab-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warm-light); flex: 1; }
+  .slide-src-id { font-size: 10px; font-family: 'Courier New', monospace; color: var(--warm-pale); background: var(--white); border: 1px solid var(--border); padding: 1px 6px; border-radius: 3px; }
+  .slide-body { padding: 20px; }
+  .slide-headline-wrap { margin-bottom: 10px; }
+  .slide-headline { font-size: 17px; font-weight: 600; color: var(--warm-dark); line-height: 1.35; display: inline; }
+  .cite-msg { display: inline-block; font-size: 10px; font-family: 'Courier New', monospace; color: var(--blue); background: var(--blue-light); border: 1px solid var(--blue-mid); padding: 0 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; }
+  .cite-ai { display: inline-block; font-size: 10px; font-family: 'Courier New', monospace; color: var(--warm-mid); background: var(--warm-ghost); border: 1px solid var(--border); padding: 0 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; cursor: pointer; transition: background 0.15s; }
+  .cite-ai:hover { background: var(--amber-light); border-color: var(--amber-border); color: var(--amber); }
+  .cite-ai.flagged { background: var(--amber-light); border-color: var(--amber-border); color: var(--amber); }
+  .slide-copy { font-size: 13px; color: var(--warm-mid); line-height: 1.75; }
+  .slide-note { margin-top: 12px; padding: 10px 14px; background: var(--blue-light); border-left: 3px solid var(--blue); border-radius: 0 4px 4px 0; font-size: 12px; color: var(--blue-dark); font-style: italic; }
+
+  /* Gap cards */
+  .gap-card { border: 1px solid var(--amber-border); border-radius: 8px; padding: 16px 18px; background: var(--amber-light); display: flex; gap: 12px; }
+  .gap-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; color: var(--amber); }
+  .gap-title { font-size: 12px; font-weight: 600; color: var(--amber); letter-spacing: 0.04em; margin-bottom: 4px; }
+  .gap-text { font-size: 13px; color: #5A3D00; line-height: 1.6; }
+
+  /* Loading */
+  .loading-wrap { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
+  .thinking-step { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--warm-pale); opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.4s; }
+  .thinking-step.visible { opacity: 1; transform: translateY(0); }
+  .thinking-step.done { color: var(--warm-light); }
+  .thinking-step.active { color: var(--blue); }
+  .thinking-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warm-pale); flex-shrink: 0; transition: background 0.3s; }
+  .thinking-step.done .thinking-dot { background: #3A9B5C; }
+  .thinking-step.active .thinking-dot { background: var(--blue); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  /* Citation key */
+  .cite-key { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: var(--warm-ghost); border-radius: 6px; font-size: 11px; color: var(--warm-light); }
+  .cite-key-item { display: flex; align-items: center; gap: 6px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+
+    /* Header */
+    header { padding: 0 16px; height: 52px; }
+    .logo-text .product { display: none; }
+    .header-badge { display: none; }
+    .header-tabs { display: none; }
+
+    /* Bottom nav replaces header tabs on mobile */
+    .mobile-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      z-index: 200;
+      height: 56px;
+    }
+    .mobile-nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--warm-pale);
+      background: none;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color 0.15s;
+      padding: 6px 0;
+    }
+    .mobile-nav-btn.active { color: var(--blue); }
+    .mobile-nav-btn.active-amber { color: var(--amber); }
+    .mobile-nav-icon { font-size: 18px; line-height: 1; }
+    .mobile-pool-badge {
+      position: absolute;
+      top: 8px;
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--amber);
+      color: #fff;
+      border-radius: 8px;
+      padding: 1px 5px;
+      display: none;
+    }
+    .mobile-nav-btn.has-pending .mobile-pool-badge { display: block; }
+
+    /* Layout: single column */
+    .app-body {
+      grid-template-columns: 1fr;
+      min-height: calc(100vh - 52px);
+      padding-bottom: 56px;
+    }
+
+    /* Left panel: collapsible drawer */
+    .panel-left {
+      position: fixed;
+      top: 52px; left: 0; right: 0;
+      height: auto;
+      max-height: calc(100vh - 52px - 56px);
+      overflow-y: auto;
+      transform: translateY(-110%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 150;
+      padding: 20px 20px 24px;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .panel-left.open { transform: translateY(0); }
+    .panel-intro { display: none; }
+    .generate-btn { margin-top: 8px; padding: 12px; font-size: 13px; }
+
+    /* Right panel */
+    .panel-right { padding: 20px 16px; gap: 24px; }
+
+    /* Output header */
+    .output-query { font-size: 16px; }
+
+    /* Cluster cards */
+    .cluster-card { padding: 14px 16px; }
+    .cluster-headline { font-size: 14px; }
+    .cluster-rationale { font-size: 12px; }
+
+    /* Slide drafts */
+    .slide-body { padding: 14px 16px; }
+    .slide-headline { font-size: 15px; }
+    .slide-copy { font-size: 12px; }
+
+    /* Citation key: stack vertically */
+    .cite-key { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+    /* Pool view */
+    .pool-header { padding-bottom: 16px; }
+    .pool-title { font-size: 17px; }
+    .candidate-top { padding: 14px 16px 12px; }
+    .candidate-bottom { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 16px; }
+    .candidate-actions { width: 100%; }
+    .action-btn { flex: 1; text-align: center; }
+
+    /* Empty state */
+    .empty-state { padding: 40px 24px; }
+
+    /* Loading steps */
+    .thinking-step { font-size: 12px; }
+
+    /* Mobile form toggle button */
+    .mobile-form-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: calc(100% - 32px);
+      margin: 16px 16px 0;
+      padding: 12px 16px;
+      background: var(--blue-deeper);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .mobile-form-toggle-icon { font-size: 16px; }
+    .mobile-form-toggle-label { flex: 1; text-align: left; }
+    .mobile-form-toggle-arrow { font-size: 12px; opacity: 0.6; transition: transform 0.2s; }
+    .panel-left.open ~ * .mobile-form-toggle-arrow,
+    .mobile-form-toggle.open .mobile-form-toggle-arrow { transform: rotate(180deg); }
   }
 
-  const matchesA = function(e) { return hasAudience ? tagIncludes(e[1].buyingInfluence, audienceValue) : true; };
-  const matchesN = function(e) { return hasNeed ? tagIncludes(e[1].customerChallenge, needValue) : true; };
-
-  const intersection = entries.filter(function(e) { return matchesA(e) && matchesN(e); });
-  if (intersection.length > 0) return { matches: intersection, mode: 'intersection' };
-
-  if (hasAudience && hasNeed) {
-    const partial = entries.filter(function(e) { return matchesA(e) || matchesN(e); });
-    if (partial.length > 0) return { matches: partial, mode: 'partial' };
+  @media (min-width: 769px) {
+    .mobile-nav { display: none; }
+    .mobile-form-toggle { display: none; }
   }
 
-  return { matches: [], mode: 'none' };
+  /* ── Candidate pool view ── */
+  .pool-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .pool-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .pool-title { font-size: 20px; font-weight: 500; color: var(--warm-dark); }
+  .pool-subtitle { font-size: 13px; color: var(--warm-light); margin-top: 4px; line-height: 1.5; }
+  .pool-stats { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .pool-stat { font-size: 12px; color: var(--warm-light); display: flex; align-items: center; gap: 6px; }
+  .pool-stat strong { color: var(--warm-dark); font-weight: 600; }
+
+  .pool-empty { text-align: center; padding: 60px 40px; color: var(--warm-pale); }
+  .pool-empty p { font-size: 14px; margin-top: 8px; }
+
+  .candidate-card { border: 1px solid var(--border); border-radius: 8px; background: var(--white); overflow: hidden; transition: border-color 0.2s; }
+  .candidate-card.approved { border-color: #A8D5B5; background: #F6FBF8; }
+  .candidate-card.rejected { border-color: #E8C0BA; background: #FDF5F4; opacity: 0.6; }
+
+  .candidate-top { padding: 16px 18px 14px; }
+  .candidate-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .candidate-type { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .type-headline { color: #4A1060; background: #F3E8FB; }
+  .type-copy { color: #00587A; background: #E0F3FB; }
+  .candidate-context { font-size: 11px; color: var(--warm-pale); }
+  .candidate-text { font-size: 14px; font-weight: 500; color: var(--warm-dark); line-height: 1.5; }
+  .candidate-support { font-size: 12px; color: var(--warm-light); margin-top: 6px; line-height: 1.55; }
+
+  .candidate-bottom { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--surface); border-top: 1px solid var(--border); gap: 12px; flex-wrap: wrap; }
+  .candidate-tags-wrap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .candidate-tag-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warm-pale); }
+  .candidate-tag { font-size: 11px; color: var(--warm-light); background: var(--warm-ghost); border: 1px solid var(--border); padding: 2px 8px; border-radius: 20px; }
+  .candidate-tag-input { font-size: 11px; font-family: inherit; color: var(--warm-dark); background: var(--white); border: 1px solid var(--border); padding: 3px 8px; border-radius: 20px; outline: none; width: 140px; }
+  .candidate-tag-input:focus { border-color: var(--blue); }
+
+  .candidate-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .action-btn { font-size: 12px; font-weight: 600; font-family: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid; cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em; }
+  .approve-btn { color: var(--green); background: var(--green-light); border-color: #A8D5B5; }
+  .approve-btn:hover { background: #C8EDD5; }
+  .reject-btn { color: var(--red); background: var(--red-light); border-color: #E8C0BA; }
+  .reject-btn:hover { background: #F5D5D0; }
+  .approved-badge { font-size: 11px; font-weight: 600; color: var(--green); background: var(--green-light); border: 1px solid #A8D5B5; padding: 4px 10px; border-radius: 20px; }
+  .rejected-badge { font-size: 11px; font-weight: 600; color: var(--red); background: var(--red-light); border: 1px solid #E8C0BA; padding: 4px 10px; border-radius: 20px; }
+
+
+
+  .panel-left::-webkit-scrollbar { width: 4px; }
+  .panel-left::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+  /* PDF viewer modal */
+  .pdf-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(20,20,25,0.72); z-index: 1000; align-items: center; justify-content: center; padding: 24px; }
+  .pdf-modal-overlay.open { display: flex; }
+  .pdf-modal { background: var(--white); border-radius: 10px; max-width: 900px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .pdf-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .pdf-modal-title { font-size: 13px; font-weight: 600; color: var(--warm-dark); }
+  .pdf-modal-close { background: none; border: none; font-size: 20px; line-height: 1; color: var(--warm-light); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .pdf-modal-close:hover { background: var(--warm-ghost); color: var(--warm-dark); }
+  .pdf-modal-body { flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center; background: var(--warm-ghost); padding: 20px; }
+  .pdf-modal-body canvas { box-shadow: 0 2px 10px rgba(0,0,0,0.15); max-width: 100%; height: auto; }
+  .pdf-modal-footer { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .pdf-nav-btn { background: var(--warm-ghost); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--warm-dark); }
+  .pdf-nav-btn:hover:not(:disabled) { background: var(--border); }
+  .pdf-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pdf-page-indicator { font-size: 13px; color: var(--warm-light); min-width: 90px; text-align: center; }
+  .pdf-loading { font-size: 13px; color: var(--warm-light); padding: 40px; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<header>
+  <div class="logo-group">
+    <img src="data:image/webp;base64,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" alt="Roche" style="height:38px;width:auto;flex-shrink:0;">
+    <div class="logo-text">
+      <span class="company">Roche Diagnostics</span>
+      <span class="product">AIM Framework &mdash; Messaging Intelligence</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-tabs">
+      <button class="header-tab active" id="tabBrief" onclick="showView('brief')">Messaging recommendations</button>
+      <button class="header-tab" id="tabPool" onclick="showView('pool')">Library candidates <span class="pool-count" id="poolCount">0</span></button>
+    </div>
+    <div class="header-badge">Prototype &middot; Internal Use Only</div>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- Mobile form toggle (small screens only) -->
+  <button class="mobile-form-toggle" id="mobileFormToggle" onclick="toggleMobileForm()">
+    <span class="mobile-form-toggle-icon">&#9881;</span>
+    <span class="mobile-form-toggle-label" id="mobileToggleLabel">Configure query</span>
+    <span class="mobile-form-toggle-arrow" id="mobileToggleArrow">&#9660;</span>
+  </button>
+
+  <aside class="panel-left" id="panelLeft">
+    <div>
+      <p class="panel-section-label">Query builder</p>
+      <p class="panel-intro">Select your audience, topic, and context. The agent reads the full message library, reasons about narrative fit, and returns relevant messaging.</p>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="deliverable">Deliverable type</label>
+      <select class="field-select" id="deliverable" disabled>
+        <option value="all">All</option>
+        <option value="sales-deck">Sales deck</option>
+        <option value="ad-campaign">Ad campaign</option>
+        <option value="social-captions">Social captions</option>
+        <option value="leave-behind">Leave-behind document</option>
+        <option value="exec-briefing">Executive briefing</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="topics">Topics</label>
+      <select class="field-select" id="topics">
+        <option value="all" disabled>All</option>
+        <option value="clinical" disabled>Clinical</option>
+        <option value="innovation" selected>Innovation</option>
+        <option value="collaboration" disabled>Collaboration</option>
+        <option value="neurology" disabled>Neurology</option>
+        <option value="core-lab" disabled>Core Lab</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="disease">Disease area</label>
+      <select class="field-select" id="disease">
+        <option value="all" disabled>All</option>
+        <option value="infectious-disease" selected>Infectious Disease</option>
+        <option value="neurology" disabled>Neurology</option>
+        <option value="oncology" disabled>Oncology</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="audience">Buying influence</label>
+      <select class="field-select" id="audience">
+        <option value="all">All</option>
+        <option value="operational">Operational</option>
+        <option value="financial">Financial</option>
+        <option value="clinical">Clinical</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="customerNeed">Customer challenge</label>
+      <select class="field-select" id="customerNeed">
+        <option value="all">All</option>
+        <option value="automation-digitalization">Automation &amp; Digitalization</option>
+        <option value="managing-staff-shortages">Managing Staff Shortages</option>
+        <option value="strategic-partnership">Strategic Partnership</option>
+        <option value="operational-excellence-uptime">Operational Excellence &amp; Uptime</option>
+        <option value="access-to-innovation">Access to Innovation</option>
+        <option value="cost-effective-right-sized-solutions">Cost-Effective &amp; Right-Sized Solutions</option>
+        <option value="training-expertise">Training &amp; Expertise</option>
+        <option value="product-technical">Product &amp; Technical</option>
+        <option value="service-logistics-reliability">Service &amp; Logistics Reliability</option>
+        <option value="commercial-procurement-flexibility">Commercial &amp; Procurement Flexibility</option>
+        <option value="communication-transparency">Communication &amp; Transparency</option>
+        <option value="reagent-waste-packaging">Reagent Waste &amp; Packaging</option>
+        <option value="barriers-to-digital-adoption">Barriers to Digital Adoption</option>
+        <option value="infrastructure-space-constraints">Infrastructure &amp; Space Constraints</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="portfolio">Portfolio</label>
+      <select class="field-select" id="portfolio">
+        <option value="all">All</option>
+        <option value="near-patient-care">Near Patient Care</option>
+        <option value="molecular-lab">Molecular Lab</option>
+        <option value="core-lab">Core Lab</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="product">Product</label>
+      <select class="field-select" id="product">
+        <option value="all">All</option>
+        <option value="cobas-liat">Cobas Liat</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="contentType">Content type</label>
+      <select class="field-select" id="contentType">
+        <option value="all">All</option>
+        <option value="lead-message">Lead Message</option>
+        <option value="support">Support</option>
+        <option value="proof">Proof</option>
+      </select>
+    </div>
+    <button class="generate-btn" id="generateBtn" onclick="runAgent()">
+      &#11041; &nbsp;Generate Messaging Recommendations
+    </button>
+  </aside>
+
+  <main class="panel-right" id="panelRight">
+
+    <!-- Brief view -->
+    <div class="view active" id="viewBrief">
+      <div class="empty-state" id="emptyState">
+        <svg width="100" height="100" viewBox="0 0 100 100" fill="none" style="opacity:0.18;margin-bottom:8px;">
+          <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5" fill="none" stroke="#007AC2" stroke-width="2.5"/>
+          <polygon points="50,20 75,34 75,62 50,76 25,62 25,34" fill="none" stroke="#007AC2" stroke-width="1.5"/>
+          <polygon points="50,36 64,44 64,60 50,68 36,60 36,44" fill="none" stroke="#007AC2" stroke-width="1"/>
+        </svg>
+        <h2>Select your parameters</h2>
+        <p>Configure audience, topic, and context to generate a fully-reasoned messaging brief with source citations.</p>
+      </div>
+      <div id="outputContent" style="display:none;flex-direction:column;gap:32px;"></div>
+    </div>
+
+    <!-- Candidate pool view -->
+    <div class="view" id="viewPool">
+      <div class="pool-header">
+      <div class="pool-header-top">
+          <div>
+            <p class="output-eyebrow">Library development</p>
+            <p class="pool-title">Library candidates</p>
+            <p class="pool-subtitle">AI-generated content flagged for review. Approve to promote to the message library with tags. Reject to discard.</p>
+          </div>
+        </div>
+        <div class="pool-stats" id="poolStats"></div>
+      </div>
+      <div id="poolList"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-btn active" id="mobileTabBrief" onclick="showView('brief')">
+    <span class="mobile-nav-icon">&#9776;</span>
+    Brief
+  </button>
+  <button class="mobile-nav-btn" id="mobileTabPool" onclick="showView('pool')" style="position:relative;">
+    <span class="mobile-pool-badge" id="mobilePoolBadge">0</span>
+    <span class="mobile-nav-icon">&#9651;</span>
+    Candidates
+  </button>
+</nav>
+
+<div class="pdf-modal-overlay" id="pdfModalOverlay" onclick="if(event.target===this) closePdfViewer();">
+  <div class="pdf-modal">
+    <div class="pdf-modal-header">
+      <span class="pdf-modal-title" id="pdfModalTitle">Global Customer Relationship Study 2025</span>
+      <button class="pdf-modal-close" onclick="closePdfViewer()" aria-label="Close">&times;</button>
+    </div>
+    <div class="pdf-modal-body" id="pdfModalBody">
+      <div class="pdf-loading">Loading page&hellip;</div>
+    </div>
+    <div class="pdf-modal-footer">
+      <button class="pdf-nav-btn" id="pdfPrevBtn" onclick="pdfGoToPage(pdfCurrentPage - 1)">&larr; Prev</button>
+      <span class="pdf-page-indicator" id="pdfPageIndicator">Page \u2014</span>
+      <button class="pdf-nav-btn" id="pdfNextBtn" onclick="pdfGoToPage(pdfCurrentPage + 1)">Next &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Candidate pool — persists across sessions
+let candidatePool = JSON.parse(localStorage.getItem('roche_candidates') || '[]');
+let currentContext = {};
+
+function savePool() {
+  localStorage.setItem('roche_candidates', JSON.stringify(candidatePool));
+  updatePoolBadge();
 }
 
-function buildGaps(mode, count, kind) {
-  if (mode === 'all') return [];
-  if (count === 0) {
-    return [{ title: 'No match found', description: 'No ' + kind + ' entries in the library satisfy the requested buying influence and customer need.' }];
-  }
-  if (mode === 'partial') {
-    return [{ title: 'Partial match only', description: 'No entry satisfied both the requested buying influence and customer need together \u2014 showing entries that match at least one.' }];
-  }
-  return [];
+function updatePoolBadge() {
+  const pending = candidatePool.filter(c => c.status === 'pending').length;
+  const countEl = document.getElementById('poolCount');
+  const tabPool = document.getElementById('tabPool');
+  if (countEl) countEl.textContent = pending;
+  if (tabPool) tabPool.classList.toggle('has-pending', pending > 0);
 }
 
-// lead: matched directly by its own tags.
-// support / proof: matched via relatedLead — first find which lead(s) fit
-// the requested filters, then return target-type entries that substantiate
-// one of those leads.
-function selectByType(kind, audienceValue, needValue) {
-  if (kind === 'lead') {
-    const entries = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === 'lead'; });
-    const filtered = filterEntries(entries, audienceValue, needValue);
-    const selections = filtered.matches.map(function(e) { return { id: e[0], text: e[1].text, source: e[1].source, type: 'lead' }; });
-    return { selections: selections, gaps: buildGaps(filtered.mode, selections.length, 'lead') };
-  }
-
-  const allLeads = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === 'lead'; });
-  const leadMatch = filterEntries(allLeads, audienceValue, needValue);
-  const matchedLeadIds = leadMatch.matches.map(function(e) { return e[0]; });
-
-  const targetEntries = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === kind; });
-  const linked = targetEntries.filter(function(e) { return (e[1].relatedLead || []).some(function(rl) { return matchedLeadIds.indexOf(rl) !== -1; }); });
-
-  const selections = linked.map(function(e) { return { id: e[0], text: e[1].text, source: e[1].source, type: kind }; });
-  return { selections: selections, gaps: buildGaps(leadMatch.mode, selections.length, kind) };
+function addToPool(text, type, context, suggestedTags) {
+  // Avoid exact duplicates
+  if (candidatePool.find(c => c.text === text)) return;
+  candidatePool.push({
+    id: 'cand-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+    text,
+    type,
+    context: { ...context },
+    suggestedTags: suggestedTags || [],
+    status: 'pending',
+    addedAt: new Date().toISOString()
+  });
+  savePool();
 }
 
-// --- Generative-content infrastructure (not used by /api/generate today) ---
-// Retrieval above is fully deterministic on purpose. This is kept ready for
-// the planned feature where the LLM drafts customer-facing copy FROM a set
-// of already-verbatim-matched selections (e.g. weaving a chosen Lead +
-// Support into a cohesive email) — a genuinely generative step layered on
-// top of deterministic retrieval, not a replacement for it. Selection
-// (which entries are relevant) should stay deterministic even after this is
-// wired in; only the drafting step should call the model.
-
-function callAnthropic(systemPrompt, userPrompt) {
-  if (!API_KEY) {
-    return Promise.reject(new Error('ANTHROPIC_API_KEY not set \u2014 required for generative features (not for content selection).'));
+function showView(view) {
+  document.getElementById('viewBrief').classList.toggle('active', view === 'brief');
+  document.getElementById('viewPool').classList.toggle('active', view === 'pool');
+  // Desktop tabs
+  const tabBrief = document.getElementById('tabBrief');
+  const tabPool = document.getElementById('tabPool');
+  if (tabBrief) tabBrief.classList.toggle('active', view === 'brief');
+  if (tabPool) {
+    tabPool.classList.remove('active','active-amber');
+    if (view === 'pool') {
+      const pending = candidatePool.filter(c => c.status === 'pending').length;
+      tabPool.classList.add(pending > 0 ? 'active-amber' : 'active');
+    }
   }
-  return new Promise(function(resolve, reject) {
-    const payload = JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    });
-    const options = {
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(payload)
-      }
-    };
-    const apiReq = https.request(options, apiRes => {
-      const bodyChunks = [];
-      apiRes.on('data', c => bodyChunks.push(c));
-      apiRes.on('end', () => {
-        const body = Buffer.concat(bodyChunks).toString('utf8');
-        if (apiRes.statusCode !== 200) {
-          let errMsg = 'Anthropic error ' + apiRes.statusCode;
-          try { errMsg = JSON.parse(body).error?.message || errMsg; } catch (_) {}
-          reject(new Error(errMsg));
-          return;
-        }
-        try {
-          const data = JSON.parse(body);
-          const text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
-          resolve(text);
-        } catch (e) {
-          reject(new Error('Malformed response from Anthropic: ' + e.message));
-        }
-      });
-    });
-    apiReq.on('error', function(e) { reject(new Error('Cannot reach Anthropic: ' + e.message)); });
-    apiReq.write(payload);
-    apiReq.end();
+  // Mobile nav
+  const mobileTabBrief = document.getElementById('mobileTabBrief');
+  const mobileTabPool = document.getElementById('mobileTabPool');
+  if (mobileTabBrief) mobileTabBrief.classList.toggle('active', view === 'brief');
+  if (mobileTabPool) {
+    mobileTabPool.classList.remove('active','active-amber');
+    if (view === 'pool') {
+      const pending = candidatePool.filter(c => c.status === 'pending').length;
+      mobileTabPool.classList.add(pending > 0 ? 'active-amber' : 'active');
+    }
+  }
+  // Close mobile form drawer
+  closeMobileForm();
+  if (view === 'pool') renderPool();
+}
+
+function renderPool() {
+  const list = document.getElementById('poolList');
+  const stats = document.getElementById('poolStats');
+
+  const total = candidatePool.length;
+  const pending = candidatePool.filter(c => c.status === 'pending').length;
+  const approved = candidatePool.filter(c => c.status === 'approved').length;
+  const rejected = candidatePool.filter(c => c.status === 'rejected').length;
+
+  stats.innerHTML =
+    '<div class="pool-stat"><strong>' + total + '</strong> total</div>' +
+    '<div class="pool-stat"><strong>' + pending + '</strong> pending review</div>' +
+    '<div class="pool-stat"><strong style="color:var(--green)">' + approved + '</strong> approved</div>' +
+    '<div class="pool-stat"><strong style="color:var(--red)">' + rejected + '</strong> rejected</div>';
+
+  if (total === 0) {
+    list.innerHTML = '<div class="pool-empty"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="opacity:0.2;margin:0 auto 12px;display:block;"><polygon points="24,3 43,13.5 43,34.5 24,45 5,34.5 5,13.5" fill="none" stroke="#007AC2" stroke-width="2"/></svg><p>No candidates yet. Generate a brief — all [AI] sentences are automatically flagged here for review.</p></div>';
+    return;
+  }
+
+  // Show pending first, then approved, then rejected
+  const sorted = [...candidatePool].sort((a,b) => {
+    const order = { pending: 0, approved: 1, rejected: 2 };
+    return (order[a.status] - order[b.status]) || (new Date(b.addedAt) - new Date(a.addedAt));
+  });
+
+  list.innerHTML = '';
+  sorted.forEach(cand => {
+    const card = document.createElement('div');
+    card.className = 'candidate-card' + (cand.status !== 'pending' ? ' ' + cand.status : '');
+    card.id = 'cand-' + cand.id;
+
+    const poolTypeLabels = { lead: 'Lead message', support: 'Support point', proof: 'Proof' };
+    const typeLabel = poolTypeLabels[cand.type] || 'Lead message';
+    const typeCls = cand.type === 'support' ? 'type-copy' : 'type-headline';
+    const ctx = cand.context;
+    const contextStr = [ctx.deliverable, ctx.audience, ctx.disease, ctx.values].filter(Boolean).join(' · ');
+
+    const tagsHtml = cand.suggestedTags.map(t => '<span class="candidate-tag">' + t + '</span>').join('');
+
+    let actionsHtml = '';
+    if (cand.status === 'pending') {
+      actionsHtml =
+        '<div class="candidate-actions">' +
+        '<button class="action-btn reject-btn" onclick="reviewCandidate(\'' + cand.id + '\', \'rejected\')">Reject</button>' +
+        '<button class="action-btn approve-btn" onclick="reviewCandidate(\'' + cand.id + '\', \'approved\')">Approve for library</button>' +
+        '</div>';
+    } else if (cand.status === 'approved') {
+      actionsHtml = '<span class="approved-badge">&#10003; Approved</span>';
+    } else {
+      actionsHtml = '<span class="rejected-badge">&#10005; Rejected</span>';
+    }
+
+    card.innerHTML =
+      '<div class="candidate-top">' +
+        '<div class="candidate-meta">' +
+          '<span class="candidate-type ' + typeCls + '">' + typeLabel + '</span>' +
+          '<span class="candidate-context">' + contextStr + '</span>' +
+        '</div>' +
+        '<div class="candidate-text">' + cand.text + '</div>' +
+      '</div>' +
+      '<div class="candidate-bottom">' +
+        '<div class="candidate-tags-wrap">' +
+          '<span class="candidate-tag-label">Suggested tags</span>' +
+          tagsHtml +
+          (cand.status === 'pending' ? '<input class="candidate-tag-input" id="tag-input-' + cand.id + '" placeholder="add tag, press enter" onkeydown="addTag(event, \'' + cand.id + '\')">' : '') +
+        '</div>' +
+        actionsHtml +
+      '</div>';
+
+    list.appendChild(card);
   });
 }
 
-// The model reliably returns only JSON when instructed to, but occasionally
-// adds a conversational preamble anyway. Pull the {...} substring out
-// directly so that can never break parsing of a generative response either.
-function extractJSON(text) {
-  const stripped = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  const start = stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error('No JSON object found in model response');
+function addTag(e, id) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('tag-input-' + id);
+  const val = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!val) return;
+  const cand = candidatePool.find(c => c.id === id);
+  if (cand && !cand.suggestedTags.includes(val)) {
+    cand.suggestedTags.push(val);
+    savePool();
+    renderPool();
   }
-  return JSON.parse(stripped.slice(start, end + 1));
+  input.value = '';
 }
 
-function sendJSON(res, status, obj) {
-  const body = JSON.stringify(obj);
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
-  res.end(body);
+function reviewCandidate(id, status) {
+  const cand = candidatePool.find(c => c.id === id);
+  if (cand) { cand.status = status; savePool(); renderPool(); }
 }
 
-const server = http.createServer((req, res) => {
-  const reqPath = req.url.split('?')[0].replace(/\/+$/, '') || '/';
+function buildSystemPrompt() {
+  // Deprecated — generation now happens server-side in server.js against the
+  // Global Customer Relationship Study 2025 library.
+  return '';
+}
 
-  if (req.method === 'GET' && (reqPath === '/' || reqPath === '')) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(HTML);
-    return;
+async function runAgent() {
+  const btn = document.getElementById('generateBtn');
+  const deliverableEl = document.getElementById('deliverable');
+  const audienceEl = document.getElementById('audience');
+  const customerNeedEl = document.getElementById('customerNeed');
+  const topicsEl = document.getElementById('topics');
+  const diseaseEl = document.getElementById('disease');
+  const portfolioEl = document.getElementById('portfolio');
+  const productEl = document.getElementById('product');
+  const contentTypeEl = document.getElementById('contentType');
+
+  const deliverableLabel = deliverableEl.options[deliverableEl.selectedIndex].text;
+  const audienceLabel = audienceEl.options[audienceEl.selectedIndex].text;
+  const customerNeedLabel = customerNeedEl.options[customerNeedEl.selectedIndex].text;
+  const topicsLabel = topicsEl.options[topicsEl.selectedIndex].text;
+  const diseaseLabel = diseaseEl.options[diseaseEl.selectedIndex].text;
+  const portfolioLabel = portfolioEl.options[portfolioEl.selectedIndex].text;
+  const productLabel = productEl.options[productEl.selectedIndex].text;
+  const contentTypeLabel = contentTypeEl.options[contentTypeEl.selectedIndex].text;
+
+  currentContext = { deliverable: deliverableLabel, audience: audienceLabel, customerNeed: customerNeedLabel, topics: topicsLabel, disease: diseaseLabel, portfolio: portfolioLabel, product: productLabel, contentType: contentTypeLabel };
+
+  showView('brief');
+  btn.disabled = true;
+  btn.textContent = 'Analysing\u2026';
+  closeMobileForm();
+
+  document.getElementById('emptyState').style.display = 'none';
+  const outputContent = document.getElementById('outputContent');
+  outputContent.style.display = 'flex';
+  outputContent.innerHTML = '';
+
+  const headerEl = document.createElement('div');
+  headerEl.className = 'output-header';
+  headerEl.innerHTML =
+    '<p class="output-eyebrow">Messaging recommendations</p>' +
+    '<p class="output-query">' + deliverableLabel + ' &mdash; ' + audienceLabel + '</p>' +
+    '<div class="output-tags">' +
+      '<span class="otag otag-blue">' + topicsLabel + '</span>' +
+      '<span class="otag otag-blue">' + customerNeedLabel + '</span>' +
+      '<span class="otag otag-blue">' + diseaseLabel + '</span>' +
+      '<span class="otag otag-blue">' + portfolioLabel + '</span>' +
+      '<span class="otag otag-blue">' + productLabel + '</span>' +
+      '<span class="otag otag-gray">' + contentTypeLabel + '</span>' +
+    '</div>';
+  outputContent.appendChild(headerEl);
+
+  const steps = [
+    'Reading Global Customer Relationship Study 2025 library\u2026',
+    'Matching entries to buying influence and customer need\u2026',
+    'Selecting verbatim text \u2014 no rewriting, no paraphrasing\u2026',
+    'Checking citations against source slides\u2026',
+    'Flagging any gaps in library coverage\u2026'
+  ];
+
+  const loadingWrap = document.createElement('div');
+  loadingWrap.className = 'loading-wrap';
+  steps.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'thinking-step';
+    el.id = 'step-' + i;
+    el.innerHTML = '<div class="thinking-dot"></div><span>' + s + '</span>';
+    loadingWrap.appendChild(el);
+  });
+  outputContent.appendChild(loadingWrap);
+
+  for (let i = 0; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    document.getElementById('step-' + i).classList.add('visible','active');
+    if (i > 0) {
+      const prev = document.getElementById('step-' + (i-1));
+      prev.classList.remove('active');
+      prev.classList.add('done');
+    }
   }
 
-  if (req.method === 'GET' && reqPath === '/health') {
-    sendJSON(res, 200, { ok: true });
-    return;
-  }
+  const userPrompt = 'Generate a ' + deliverableLabel + ' for:\n- Buying influence: ' + audienceLabel + '\n- Topics: ' + topicsLabel + '\n- Customer need: ' + customerNeedLabel + '\n- Disease area: ' + diseaseLabel + '\n- Portfolio: ' + portfolioLabel + '\n- Product: ' + productLabel + '\n- Content type: ' + contentTypeLabel + '\n\nAnalyse the full library, select the best messages with reasoning, architect a narrative sequence for this specific audience, draft copy with citations on every sentence and every headline, and identify gaps.';
 
-  if (req.method === 'GET' && reqPath === '/reference-deck.pdf') {
-    fs.readFile(DECK_PDF_PATH, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Deck not found'); return; }
-      res.writeHead(200, {
-        'Content-Type': 'application/pdf',
-        'Content-Length': data.length,
-        'Content-Disposition': 'inline; filename="Global Customer Relationship Study 2025.pdf"'
-      });
-      res.end(data);
+  let result;
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deliverable: deliverableLabel,
+        audience: audienceLabel,
+        audienceValue: audienceEl.value,
+        topics: topicsLabel,
+        customerNeed: customerNeedLabel,
+        customerNeedValue: customerNeedEl.value,
+        disease: diseaseLabel,
+        portfolio: portfolioLabel,
+        product: productLabel,
+        contentType: contentTypeLabel
+      })
     });
-    return;
-  }
+    if (!response.ok) {
+      let errMsg = 'Server error ' + response.status;
+      try { const e = await response.json(); errMsg = e.error || errMsg; } catch (_) {}
+      throw new Error(errMsg);
+    }
 
-  // Streaming endpoint (kept as SSE for client compatibility, though for
-  // simplicity — and since 'all' must combine three separate calls — each
-  // call to Anthropic here is non-streaming internally; only one final
-  // "result" event is ever emitted per request).
-  if (req.method === 'POST' && reqPath === '/api/generate') {
-    const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => {
-      let parsed;
-      try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-      catch (e) { sendJSON(res, 400, { error: 'Invalid JSON: ' + e.message }); return; }
+    // Server responds as an SSE stream (event: token / event: result / event: error),
+    // not a plain JSON body — parse it as such rather than calling response.json().
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult = null;
+    let streamError = null;
 
-      const typeKey = contentTypeKey(parsed.contentType);
-
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
-      });
-
-      // Match on the underlying tag values (e.g. "financial", not the display
-      // label "Financial"), sent by the client alongside the labels.
-      const audienceValue = (parsed.audienceValue || '').toLowerCase();
-      const needValue = (parsed.customerNeedValue || '').toLowerCase();
-
-      let combined;
-      if (typeKey === 'all') {
-        const l = selectByType('lead', audienceValue, needValue);
-        const s = selectByType('support', audienceValue, needValue);
-        const p = selectByType('proof', audienceValue, needValue);
-        combined = {
-          selections: l.selections.concat(s.selections, p.selections),
-          gaps: l.gaps.concat(s.gaps, p.gaps)
-        };
-      } else {
-        combined = selectByType(typeKey, audienceValue, needValue);
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        let eventType = 'message';
+        let dataStr = '';
+        rawEvent.split('\n').forEach(function(line) {
+          if (line.indexOf('event: ') === 0) eventType = line.slice(7).trim();
+          else if (line.indexOf('data: ') === 0) dataStr += line.slice(6);
+        });
+        if (!dataStr) continue;
+        let payload;
+        try { payload = JSON.parse(dataStr); } catch (_) { continue; }
+        if (eventType === 'result') finalResult = payload.result;
+        else if (eventType === 'error') streamError = payload.error;
       }
+    }
 
-      console.log('[generate] type=' + typeKey + ' audience=' + (audienceValue || 'all') + ' need=' + (needValue || 'all') + ' \u2014 selections:', combined.selections.length);
-
-      const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps };
-      res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
-      res.end();
-    });
+    if (streamError) throw new Error(streamError);
+    if (!finalResult) throw new Error('Server returned empty result');
+    result = finalResult;
+    result.selections = result.selections || [];
+    result.gaps = result.gaps || [];
+  } catch (err) {
+    loadingWrap.innerHTML = '<p style="color:#C0392B;font-size:13px;">Error generating brief. Please try again.<br><small>' + err.message + '</small></p>';
+    btn.disabled = false;
+    btn.innerHTML = '&#11041; &nbsp;Generate Messaging Recommendations';
     return;
   }
 
-  console.log('[404]', req.method, reqPath);
-  res.writeHead(404);
-  res.end('Not found');
-});
+  document.getElementById('step-' + (steps.length-1)).classList.remove('active');
+  document.getElementById('step-' + (steps.length-1)).classList.add('done');
+  await new Promise(r => setTimeout(r, 300));
+  loadingWrap.remove();
 
-server.listen(PORT, () => {
-  console.log('Roche AIM demo running at http://localhost:' + PORT);
-  console.log('Content selection is fully deterministic (no API key required for this).');
-  console.log('Anthropic API key:', API_KEY ? 'YES (' + API_KEY.slice(0,16) + '...) \u2014 ready for future generative features' : 'NOT SET \u2014 fine for now, needed once generative features are added');
+  // Safety: log what we got
+  console.log('Result keys:', Object.keys(result));
+  console.log('Content type:', result.contentType);
+  console.log('Selections count:', (result.selections||[]).length);
+  console.log('Gaps count:', (result.gaps||[]).length);
+
+  const suggestedTags = [
+    audienceEl.value,
+    topicsEl.value,
+    diseaseEl.value,
+    portfolioEl.value,
+    productEl.value
+  ].filter(Boolean);
+
+  try {
+
+  const typeLabels = { lead: 'Lead messages', support: 'Support points', proof: 'Proof' };
+  const groupOrder = result.contentType === 'all' ? ['lead', 'support', 'proof'] : [result.contentType];
+
+  function renderCard(sel, container) {
+    const pageMatch = /Slide (\d+)/.exec(sel.source || '');
+    const idHtml = pageMatch
+      ? '<a class="cluster-msg-id" href="/reference-deck.pdf#page=' + pageMatch[1] + '" onclick="openPdfViewer(\'/reference-deck.pdf\', ' + pageMatch[1] + ', \'Global Customer Relationship Study 2025\'); return false;" title="' + (sel.id || '') + '">CRR-Page ' + pageMatch[1] + '</a>'
+      : '<div class="cluster-msg-id">' + (sel.id || '') + '</div>';
+    const card = document.createElement('div');
+    card.className = 'cluster-card';
+    card.innerHTML =
+      '<div class="cluster-top"><div class="cluster-headline">' + (sel.text || '') + '</div>' + idHtml + '</div>';
+    container.appendChild(card);
+    addToPool(sel.text, sel.type || result.contentType, currentContext, suggestedTags.slice());
+  }
+
+  groupOrder.forEach(function(groupType, i) {
+    const groupSelections = (result.selections || []).filter(function(sel) { return (sel.type || result.contentType) === groupType; });
+    const block = document.createElement('div');
+    block.className = 'step-block';
+    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
+
+    groupSelections.forEach(function(sel) { renderCard(sel, block); });
+
+    if (groupSelections.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'arc-note';
+      empty.textContent = 'No results.';
+      block.appendChild(empty);
+    }
+
+    outputContent.appendChild(block);
+  });
+
+  // Gap report
+  if ((result.gaps || []).length > 0) {
+    const d2 = document.createElement('hr'); d2.className = 'divider';
+    outputContent.appendChild(d2);
+    const gapBlock = document.createElement('div');
+    gapBlock.className = 'step-block';
+    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">' + (groupOrder.length + 1) + '</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
+    result.gaps.forEach(gap => {
+      const el = document.createElement('div');
+      el.className = 'gap-card';
+      el.innerHTML = '<div class="gap-icon">&#9651;</div><div><div class="gap-title">' + gap.title + '</div><div class="gap-text">' + gap.description + '</div></div>';
+      gapBlock.appendChild(el);
+    });
+    outputContent.appendChild(gapBlock);
+  }
+
+  } catch(renderErr) {
+    console.error('Render error:', renderErr);
+    outputContent.innerHTML += '<p style="color:#C0392B;font-size:13px;margin-top:16px;">Display error: ' + renderErr.message + '</p>';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '&#11041; &nbsp;Generate Messaging Recommendations';
+  updatePoolBadge();
+  outputContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+updatePoolBadge();
+
+// ── Mobile ──
+function toggleMobileForm() {
+  const panel = document.getElementById('panelLeft');
+  const arrow = document.getElementById('mobileToggleArrow');
+  const label = document.getElementById('mobileToggleLabel');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  label.textContent = isOpen ? 'Configure query' : 'Close';
+}
+
+function closeMobileForm() {
+  const panel = document.getElementById('panelLeft');
+  const arrow = document.getElementById('mobileToggleArrow');
+  const label = document.getElementById('mobileToggleLabel');
+  panel.classList.remove('open');
+  arrow.style.transform = '';
+  label.textContent = 'Configure query';
+}
+
+// ---- In-app PDF viewer (generic: works with any pdfUrl / page number) ----
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+let pdfCurrentDoc = null;
+let pdfCurrentUrl = null;
+let pdfCurrentPage = 1;
+let pdfRenderToken = 0;
+
+function openPdfViewer(pdfUrl, page, title) {
+  const overlay = document.getElementById('pdfModalOverlay');
+  document.getElementById('pdfModalTitle').textContent = title || 'Reference document';
+  overlay.classList.add('open');
+
+  const loadNewDoc = pdfCurrentUrl !== pdfUrl;
+  pdfCurrentUrl = pdfUrl;
+
+  if (!window.pdfjsLib) {
+    document.getElementById('pdfModalBody').innerHTML = '<div class="pdf-loading">PDF viewer failed to load. <a href="' + pdfUrl + '#page=' + page + '" target="_blank" rel="noopener">Open PDF directly</a> instead.</div>';
+    return;
+  }
+
+  if (loadNewDoc || !pdfCurrentDoc) {
+    document.getElementById('pdfModalBody').innerHTML = '<div class="pdf-loading">Loading document&hellip;</div>';
+    pdfjsLib.getDocument(pdfUrl).promise.then(function(doc) {
+      pdfCurrentDoc = doc;
+      pdfGoToPage(page || 1);
+    }).catch(function(err) {
+      document.getElementById('pdfModalBody').innerHTML = '<div class="pdf-loading">Could not load PDF (' + err.message + '). <a href="' + pdfUrl + '#page=' + page + '" target="_blank" rel="noopener">Open PDF directly</a> instead.</div>';
+    });
+  } else {
+    pdfGoToPage(page || 1);
+  }
+}
+
+function pdfGoToPage(page) {
+  if (!pdfCurrentDoc) return;
+  page = Math.max(1, Math.min(page, pdfCurrentDoc.numPages));
+  pdfCurrentPage = page;
+  const myToken = ++pdfRenderToken;
+
+  document.getElementById('pdfPageIndicator').textContent = 'Page ' + page + ' of ' + pdfCurrentDoc.numPages;
+  document.getElementById('pdfPrevBtn').disabled = page <= 1;
+  document.getElementById('pdfNextBtn').disabled = page >= pdfCurrentDoc.numPages;
+
+  pdfCurrentDoc.getPage(page).then(function(pdfPage) {
+    if (myToken !== pdfRenderToken) return; // a newer navigation superseded this render
+    const scale = 1.4;
+    const viewport = pdfPage.getViewport({ scale: scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const body = document.getElementById('pdfModalBody');
+    body.innerHTML = '';
+    body.appendChild(canvas);
+    pdfPage.render({ canvasContext: canvas.getContext('2d'), viewport: viewport });
+  });
+}
+
+function closePdfViewer() {
+  document.getElementById('pdfModalOverlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  const overlay = document.getElementById('pdfModalOverlay');
+  if (!overlay.classList.contains('open')) return;
+  if (e.key === 'Escape') closePdfViewer();
+  if (e.key === 'ArrowLeft') pdfGoToPage(pdfCurrentPage - 1);
+  if (e.key === 'ArrowRight') pdfGoToPage(pdfCurrentPage + 1);
 });
+</script>
+</body>
+</html>
