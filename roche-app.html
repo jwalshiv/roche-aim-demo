@@ -785,8 +785,10 @@ async function runAgent() {
       body: JSON.stringify({
         deliverable: deliverableLabel,
         audience: audienceLabel,
+        audienceValue: audienceEl.value,
         topics: topicsLabel,
         customerNeed: customerNeedLabel,
+        customerNeedValue: customerNeedEl.value,
         disease: diseaseLabel,
         portfolio: portfolioLabel,
         product: productLabel,
