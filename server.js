@@ -14,8 +14,6 @@ if (!API_KEY) {
 const HTML = fs.readFileSync(path.join(__dirname, 'roche-app.html'), 'utf8');
 const DECK_PDF_PATH = path.join(__dirname, 'reference-deck.pdf');
 
-const PROOF_URL = 'https://roche-aim-infographic.onrender.com/';
-
 // Reference database: verbatim content from the Global Customer Relationship
 // Study 2025 deck only. Every "text" field must be reproduced exactly as
 // written in the source deck — no paraphrasing, no rewriting.
@@ -87,6 +85,7 @@ const MESSAGE_LIBRARY = {
 
 function contentTypeKey(label) {
   const s = (label || '').toLowerCase();
+  if (s === 'all') return 'all';
   if (s.indexOf('proof') !== -1) return 'proof';
   if (s.indexOf('support') !== -1) return 'support';
   return 'lead';
@@ -202,7 +201,10 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Streaming endpoint
+  // Streaming endpoint (kept as SSE for client compatibility, though for
+  // simplicity — and since 'all' must combine three separate calls — each
+  // call to Anthropic here is non-streaming internally; only one final
+  // "result" event is ever emitted per request).
   if (req.method === 'POST' && reqPath === '/api/generate') {
     const chunks = [];
     req.on('data', chunk => chunks.push(chunk));
@@ -213,7 +215,6 @@ const server = http.createServer((req, res) => {
 
       const typeKey = contentTypeKey(parsed.contentType);
 
-      // Set up SSE headers so browser receives tokens/result the same way regardless of path
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -223,105 +224,86 @@ const server = http.createServer((req, res) => {
 
       const userPrompt = 'Requested context:\n- Buying influence: ' + parsed.audience + '\n- Topics: ' + parsed.topics + '\n- Customer need: ' + parsed.customerNeed + '\n- Disease area: ' + parsed.disease + '\n- Portfolio: ' + parsed.portfolio + '\n- Product: ' + parsed.product + '\n- Content type requested: ' + parsed.contentType + '\n\nSelect the entries that best match this buying influence and customer need. Return them verbatim with their id and source. If nothing matches well, report the gap instead of forcing a selection.';
 
-      const payload = JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
-        stream: true,
-        system: buildSystemPrompt(typeKey),
-        messages: [{ role: 'user', content: userPrompt }]
-      });
-
-      console.log('[API] Streaming request (' + typeKey + '), payload:', payload.length, 'bytes');
-
-      const options = {
-        hostname: 'api.anthropic.com',
-        path: '/v1/messages',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-          'Content-Length': Buffer.byteLength(payload)
-        }
-      };
-
-      const apiReq = https.request(options, apiRes => {
-        console.log('[API] Stream status:', apiRes.statusCode);
-
-        if (apiRes.statusCode !== 200) {
-          const errChunks = [];
-          apiRes.on('data', c => errChunks.push(c));
-          apiRes.on('end', () => {
-            let errMsg = 'Anthropic error ' + apiRes.statusCode;
-            try { errMsg = JSON.parse(Buffer.concat(errChunks).toString()).error?.message || errMsg; } catch (_) {}
-            res.write('event: error\ndata: ' + JSON.stringify({ error: errMsg }) + '\n\n');
-            res.end();
+      function callAnthropic(systemPrompt) {
+        return new Promise(function(resolve, reject) {
+          const payload = JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }]
           });
-          return;
-        }
-
-        let buffer = '';
-
-        apiRes.on('data', chunk => {
-          const lines = chunk.toString().split('\n');
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') continue;
-            try {
-              const evt = JSON.parse(data);
-              if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-                const token = evt.delta.text;
-                buffer += token;
-                res.write('event: token\ndata: ' + JSON.stringify({ token }) + '\n\n');
+          const options = {
+            hostname: 'api.anthropic.com',
+            path: '/v1/messages',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': API_KEY,
+              'anthropic-version': '2023-06-01',
+              'Content-Length': Buffer.byteLength(payload)
+            }
+          };
+          const apiReq = https.request(options, apiRes => {
+            const bodyChunks = [];
+            apiRes.on('data', c => bodyChunks.push(c));
+            apiRes.on('end', () => {
+              const body = Buffer.concat(bodyChunks).toString('utf8');
+              if (apiRes.statusCode !== 200) {
+                let errMsg = 'Anthropic error ' + apiRes.statusCode;
+                try { errMsg = JSON.parse(body).error?.message || errMsg; } catch (_) {}
+                reject(new Error(errMsg));
+                return;
               }
-              if (evt.type === 'message_stop') {
-                const clean = buffer.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-                try {
-                  const result = JSON.parse(clean);
-                  result.contentType = typeKey;
-                  result.selections = (result.selections || []).map(function(sel) {
-                    // Enforce verbatim: always serve the library's own text/source for the
-                    // matched id rather than trusting whatever the model echoed back.
-                    const lib = MESSAGE_LIBRARY[sel.id];
-                    return (lib && lib.type === typeKey) ? { id: sel.id, text: lib.text, source: lib.source } : null;
-                  }).filter(Boolean);
-                  result.gaps = result.gaps || [];
-
-                  // Proof always also includes the fixed infographic bridge, in
-                  // addition to any matched case-study entries.
-                  if (typeKey === 'proof') {
-                    result.proof = {
-                      text: 'Full Global Customer Relationship Study 2025 findings, presented as an interactive infographic.',
-                      url: PROOF_URL
-                    };
-                  }
-
-                  console.log('[API] Stream complete — selections:', result.selections.length, 'gaps:', result.gaps.length);
-                  res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
-                } catch (e) {
-                  console.error('[API] JSON parse error:', e.message, '| tail:', clean.slice(-200));
-                  res.write('event: error\ndata: ' + JSON.stringify({ error: 'Model returned malformed JSON: ' + e.message }) + '\n\n');
-                }
-                res.end();
+              try {
+                const data = JSON.parse(body);
+                const text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+                resolve(text);
+              } catch (e) {
+                reject(new Error('Malformed response from Anthropic: ' + e.message));
               }
-            } catch (_) {}
-          }
+            });
+          });
+          apiReq.on('error', function(e) { reject(new Error('Cannot reach Anthropic: ' + e.message)); });
+          apiReq.write(payload);
+          apiReq.end();
         });
+      }
 
-        apiRes.on('error', e => {
-          res.write('event: error\ndata: ' + JSON.stringify({ error: e.message }) + '\n\n');
-          res.end();
+      function runType(kind) {
+        return callAnthropic(buildSystemPrompt(kind)).then(function(text) {
+          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+          let parsedResult;
+          try { parsedResult = JSON.parse(clean); }
+          catch (e) { throw new Error('Model returned malformed JSON (' + kind + '): ' + e.message); }
+          const selections = (parsedResult.selections || []).map(function(sel) {
+            // Enforce verbatim: always serve the library's own text/source for the
+            // matched id rather than trusting whatever the model echoed back.
+            const lib = MESSAGE_LIBRARY[sel.id];
+            return (lib && lib.type === kind) ? { id: sel.id, text: lib.text, source: lib.source, type: kind } : null;
+          }).filter(Boolean);
+          const gaps = parsedResult.gaps || [];
+          console.log('[API] ' + kind + ' complete — selections:', selections.length, 'gaps:', gaps.length);
+          return { selections: selections, gaps: gaps };
         });
-      });
+      }
 
-      apiReq.on('error', e => {
-        res.write('event: error\ndata: ' + JSON.stringify({ error: 'Cannot reach Anthropic: ' + e.message }) + '\n\n');
+      const work = typeKey === 'all'
+        ? Promise.all([runType('lead'), runType('support'), runType('proof')]).then(function(results) {
+            return {
+              selections: results[0].selections.concat(results[1].selections, results[2].selections),
+              gaps: results[0].gaps.concat(results[1].gaps, results[2].gaps)
+            };
+          })
+        : runType(typeKey);
+
+      work.then(function(combined) {
+        const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps };
+        res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
+        res.end();
+      }).catch(function(err) {
+        res.write('event: error\ndata: ' + JSON.stringify({ error: err.message }) + '\n\n');
         res.end();
       });
-
-      apiReq.write(payload);
-      apiReq.end();
     });
     return;
   }
