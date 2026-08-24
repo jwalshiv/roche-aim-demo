@@ -3,12 +3,16 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const API_KEY = process.env.ANTHROPIC_API_KEY;
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.ANTHROPIC_API_KEY;
 
+// Content selection below (Lead/Support/Proof/internal notes) is fully
+// deterministic and does NOT use this key. It's kept here, and callAnthropic()
+// below stays ready to call, for the planned generative-content feature —
+// e.g. drafting a cohesive customer email from a set of verbatim selections.
+// Retrieval must never depend on this; only a genuinely generative step should.
 if (!API_KEY) {
-  console.error('ERROR: ANTHROPIC_API_KEY not set.');
-  process.exit(1);
+  console.warn('WARNING: ANTHROPIC_API_KEY not set. Content selection will work fine without it, but any generative feature added later will fail until it is set.');
 }
 
 const HTML = fs.readFileSync(path.join(__dirname, 'roche-app.html'), 'utf8');
@@ -105,121 +109,144 @@ function contentTypeKey(label) {
   return 'lead';
 }
 
-function libraryBlock(entries) {
-  return entries.map(([id, m]) => {
-    let block = '[' + id + ']\nText: "' + m.text + '"\nSource: ' + m.source;
-    if (m.buyingInfluence) block += '\nBuying influence: ' + m.buyingInfluence.join(', ');
-    if (m.customerChallenge) block += '\nCustomer challenge: ' + m.customerChallenge.join(', ');
-    if (m.relatedLead) block += '\nSubstantiates lead(s): ' + m.relatedLead.join(', ');
-    return block;
-  }).join('\n---\n');
+function tagIncludes(arr, val) {
+  return Array.isArray(arr) && arr.indexOf(val) !== -1;
 }
 
-function buildSystemPrompt(typeKey, audience) {
-  audience = audience || 'external';
-  // The LEAD LIBRARY used as reference context always includes both internal
-  // and external leads (it's for relevance-matching only, never returned
-  // directly for support/proof calls).
-  const leadEntries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === 'lead');
-  const leadLibrary = libraryBlock(leadEntries);
+// True intersection first: an entry must satisfy every filter that was
+// actually specified (not "All"). Only if that intersection is empty do we
+// fall back to a partial (any-one-filter) match, as a best-effort — never a
+// silent substitution of union logic for a real, specific query.
+function filterEntries(entries, audienceValue, needValue) {
+  const hasAudience = !!audienceValue && audienceValue !== 'all';
+  const hasNeed = !!needValue && needValue !== 'all';
 
-  if (typeKey === 'lead') {
-    const entries = leadEntries.filter(([, m]) => m.audience === audience);
-    const library = libraryBlock(entries);
-    const audienceNote = audience === 'internal'
-      ? 'These are Roche\u2019s own internal research findings and strategic directives \u2014 useful context, never to be copied into customer-facing material.'
-      : 'These are the entries safe to use as customer-facing content.';
-    return `You are retrieving content for Roche Diagnostics from a single approved source: the Global Customer Relationship Study 2025 deck. This is a verbatim-retrieval task, not a writing task.
-
-A LEAD MESSAGE is the highest-level statement relevant to the query. ${audienceNote}
-
-ABSOLUTE RULES:
-- You may ONLY reproduce the "Text" field of library entries below, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
-- Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
-- Select the lead entries whose buying influence and/or customer challenge tags best match the requested context. If several fit, prefer the closer match.
-- If nothing in the library reasonably matches the requested context, do not force a match \u2014 report it in "gaps" instead.
-- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
-
-JSON structure:
-{
-  "selections": [ { "id": "CRR-XX", "text": "exact verbatim text copied from the entry, unchanged", "source": "exact source field copied from the entry" } ],
-  "gaps": [ { "title": "short title", "description": "what the requested context needed that this library does not cover" } ]
-}
-
-LEAD LIBRARY:
-${library}`;
+  if (!hasAudience && !hasNeed) {
+    return { matches: entries, mode: 'all' };
   }
 
-  // support / proof: two-stage. First identify which lead(s) fit the requested
-  // context (using the full lead library \u2014 internal or external, reference
-  // only), then return only target-type entries of the requested audience
-  // whose relatedLead links to those leads. This is what "substantiates the
-  // lead message" / "related to the lead message and support" means in
-  // practice.
-  const targetEntries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === typeKey && m.audience === audience);
-  const targetLibrary = libraryBlock(targetEntries);
-  const kindNoun = typeKey === 'proof' ? 'PROOF (case studies / stories)' : 'SUPPORT (substantiating detail)';
-  const kindDefinition = typeKey === 'proof'
-    ? 'PROOF is a case study or story related to the lead message and its support \u2014 evidence that the message plays out in the real world.'
-    : 'SUPPORT is detail that substantiates a lead message \u2014 it only exists in service of a lead, never independently.';
-  const audienceNote = audience === 'internal'
-    ? 'These are Roche\u2019s own internal research findings and strategic directives \u2014 useful context, never to be copied into customer-facing material.'
-    : 'These are the entries safe to use as customer-facing content.';
+  const matchesA = function(e) { return hasAudience ? tagIncludes(e[1].buyingInfluence, audienceValue) : true; };
+  const matchesN = function(e) { return hasNeed ? tagIncludes(e[1].customerChallenge, needValue) : true; };
 
-  return `You are retrieving content for Roche Diagnostics from a single approved source: the Global Customer Relationship Study 2025 deck. This is a verbatim-retrieval task, not a writing task.
+  const intersection = entries.filter(function(e) { return matchesA(e) && matchesN(e); });
+  if (intersection.length > 0) return { matches: intersection, mode: 'intersection' };
 
-${kindDefinition} ${audienceNote}
+  if (hasAudience && hasNeed) {
+    const partial = entries.filter(function(e) { return matchesA(e) || matchesN(e); });
+    if (partial.length > 0) return { matches: partial, mode: 'partial' };
+  }
 
-PROCESS (do this internally \u2014 only the final list matters):
-1. Using the LEAD LIBRARY below (reference only, do not return these), identify which lead(s) best fit the requested buying influence and customer need.
-2. From the ${kindNoun} LIBRARY, select entries whose "Substantiates lead(s)" field includes one of those leads. Buying influence / customer challenge tags on the target entries are a secondary tiebreaker, not the primary filter \u2014 relevance flows from the lead, not from independent tag-matching.
-3. If no target-type entry links to a lead that fits this context, report the gap instead of forcing a loosely related entry.
-
-ABSOLUTE RULES:
-- You may ONLY reproduce the "Text" field of ${kindNoun} library entries, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
-- Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
-- Never return an entry from the LEAD LIBRARY itself in "selections" \u2014 only from the ${kindNoun} LIBRARY.
-- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
-
-JSON structure:
-{
-  "selections": [ { "id": "CRR-XX", "text": "exact verbatim text copied from the entry, unchanged", "source": "exact source field copied from the entry" } ],
-  "gaps": [ { "title": "short title", "description": "what the requested context needed that this library does not cover" } ]
+  return { matches: [], mode: 'none' };
 }
 
-LEAD LIBRARY (reference only \u2014 do not select from this list):
-${leadLibrary}
-
-${kindNoun} LIBRARY (select only from this list):
-${targetLibrary}`;
+function buildGaps(mode, count, kind, audience) {
+  if (mode === 'all') return [];
+  if (count === 0) {
+    return [{ title: 'No match found', description: 'No ' + audience + ' ' + kind + ' entries in the library satisfy the requested buying influence and customer need.' }];
+  }
+  if (mode === 'partial') {
+    return [{ title: 'Partial match only', description: 'No entry satisfied both the requested buying influence and customer need together \u2014 showing entries that match at least one.' }];
+  }
+  return [];
 }
 
-// Internal-facing statements are supplementary context, not the deliverable
-// itself, so they're matched directly by tag (no relatedLead requirement)
-// across all types \u2014 unlike external Lead/Support/Proof, internal notes
-// aren't organized around "which lead does this substantiate."
-function buildInternalContextPrompt() {
-  const entries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.audience === 'internal');
-  const library = libraryBlock(entries);
+// lead: matched directly by its own tags.
+// support / proof: matched via relatedLead — first find which lead(s) (of
+// any audience, since this is reference-only) fit the requested filters,
+// then return target-type entries that substantiate one of those leads.
+function selectByType(kind, audience, audienceValue, needValue) {
+  if (kind === 'lead') {
+    const entries = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === 'lead' && e[1].audience === audience; });
+    const filtered = filterEntries(entries, audienceValue, needValue);
+    const selections = filtered.matches.map(function(e) { return { id: e[0], text: e[1].text, source: e[1].source, type: 'lead' }; });
+    return { selections: selections, gaps: buildGaps(filtered.mode, selections.length, 'lead', audience) };
+  }
 
-  return `You are surfacing INTERNAL-ONLY context from Roche's Global Customer Relationship Study 2025 deck, for Roche's internal team \u2014 not for customer-facing use.
+  const allLeads = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === 'lead'; });
+  const leadMatch = filterEntries(allLeads, audienceValue, needValue);
+  const matchedLeadIds = leadMatch.matches.map(function(e) { return e[0]; });
 
-These are Roche's own research findings, diagnoses, and internal strategic recommendations. They must NEVER be copied into customer-facing material \u2014 they exist here purely to give the internal team useful background on why certain external messaging choices make sense.
+  const targetEntries = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].type === kind && e[1].audience === audience; });
+  const linked = targetEntries.filter(function(e) { return (e[1].relatedLead || []).some(function(rl) { return matchedLeadIds.indexOf(rl) !== -1; }); });
 
-ABSOLUTE RULES:
-- You may ONLY reproduce the "Text" field of library entries below, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
-- Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
-- Select entries whose buying influence and/or customer challenge tags best match the requested context. If several fit, prefer the closer match.
-- If nothing reasonably matches, return an empty selections array rather than forcing a loosely related entry.
-- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
-
-JSON structure:
-{
-  "selections": [ { "id": "CRR-XX", "text": "exact verbatim text copied from the entry, unchanged", "source": "exact source field copied from the entry" } ]
+  const selections = linked.map(function(e) { return { id: e[0], text: e[1].text, source: e[1].source, type: kind }; });
+  return { selections: selections, gaps: buildGaps(leadMatch.mode, selections.length, kind, audience) };
 }
 
-INTERNAL LIBRARY:
-${library}`;
+function selectInternalNotes(audienceValue, needValue) {
+  const entries = Object.entries(MESSAGE_LIBRARY).filter(function(e) { return e[1].audience === 'internal'; });
+  const filtered = filterEntries(entries, audienceValue, needValue);
+  return filtered.matches.map(function(e) { return { id: e[0], text: e[1].text, source: e[1].source, type: e[1].type }; });
+}
+
+// --- Generative-content infrastructure (not used by /api/generate today) ---
+// Retrieval above is fully deterministic on purpose. This is kept ready for
+// the planned feature where the LLM drafts customer-facing copy FROM a set
+// of already-verbatim-matched selections (e.g. weaving a chosen Lead +
+// Support into a cohesive email) — a genuinely generative step layered on
+// top of deterministic retrieval, not a replacement for it. Selection
+// (which entries are relevant) should stay deterministic even after this is
+// wired in; only the drafting step should call the model.
+
+function callAnthropic(systemPrompt, userPrompt) {
+  if (!API_KEY) {
+    return Promise.reject(new Error('ANTHROPIC_API_KEY not set \u2014 required for generative features (not for content selection).'));
+  }
+  return new Promise(function(resolve, reject) {
+    const payload = JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    });
+    const options = {
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+    const apiReq = https.request(options, apiRes => {
+      const bodyChunks = [];
+      apiRes.on('data', c => bodyChunks.push(c));
+      apiRes.on('end', () => {
+        const body = Buffer.concat(bodyChunks).toString('utf8');
+        if (apiRes.statusCode !== 200) {
+          let errMsg = 'Anthropic error ' + apiRes.statusCode;
+          try { errMsg = JSON.parse(body).error?.message || errMsg; } catch (_) {}
+          reject(new Error(errMsg));
+          return;
+        }
+        try {
+          const data = JSON.parse(body);
+          const text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+          resolve(text);
+        } catch (e) {
+          reject(new Error('Malformed response from Anthropic: ' + e.message));
+        }
+      });
+    });
+    apiReq.on('error', function(e) { reject(new Error('Cannot reach Anthropic: ' + e.message)); });
+    apiReq.write(payload);
+    apiReq.end();
+  });
+}
+
+// The model reliably returns only JSON when instructed to, but occasionally
+// adds a conversational preamble anyway. Pull the {...} substring out
+// directly so that can never break parsing of a generative response either.
+function extractJSON(text) {
+  const stripped = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error('No JSON object found in model response');
+  }
+  return JSON.parse(stripped.slice(start, end + 1));
 }
 
 function sendJSON(res, status, obj) {
@@ -276,119 +303,31 @@ const server = http.createServer((req, res) => {
         'Access-Control-Allow-Origin': '*'
       });
 
-      const userPrompt = 'Requested context:\n- Buying influence: ' + parsed.audience + '\n- Topics: ' + parsed.topics + '\n- Customer need: ' + parsed.customerNeed + '\n- Disease area: ' + parsed.disease + '\n- Portfolio: ' + parsed.portfolio + '\n- Product: ' + parsed.product + '\n- Content type requested: ' + parsed.contentType + '\n\nSelect the entries that best match this buying influence and customer need. Return them verbatim with their id and source. If nothing matches well, report the gap instead of forcing a selection.';
+      // Match on the underlying tag values (e.g. "financial", not the display
+      // label "Financial"), sent by the client alongside the labels.
+      const audienceValue = (parsed.audienceValue || '').toLowerCase();
+      const needValue = (parsed.customerNeedValue || '').toLowerCase();
 
-      function callAnthropic(systemPrompt) {
-        return new Promise(function(resolve, reject) {
-          const payload = JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 4000,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: userPrompt }]
-          });
-          const options = {
-            hostname: 'api.anthropic.com',
-            path: '/v1/messages',
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': API_KEY,
-              'anthropic-version': '2023-06-01',
-              'Content-Length': Buffer.byteLength(payload)
-            }
-          };
-          const apiReq = https.request(options, apiRes => {
-            const bodyChunks = [];
-            apiRes.on('data', c => bodyChunks.push(c));
-            apiRes.on('end', () => {
-              const body = Buffer.concat(bodyChunks).toString('utf8');
-              if (apiRes.statusCode !== 200) {
-                let errMsg = 'Anthropic error ' + apiRes.statusCode;
-                try { errMsg = JSON.parse(body).error?.message || errMsg; } catch (_) {}
-                reject(new Error(errMsg));
-                return;
-              }
-              try {
-                const data = JSON.parse(body);
-                const text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
-                resolve(text);
-              } catch (e) {
-                reject(new Error('Malformed response from Anthropic: ' + e.message));
-              }
-            });
-          });
-          apiReq.on('error', function(e) { reject(new Error('Cannot reach Anthropic: ' + e.message)); });
-          apiReq.write(payload);
-          apiReq.end();
-        });
+      let combined;
+      if (typeKey === 'all') {
+        const l = selectByType('lead', 'external', audienceValue, needValue);
+        const s = selectByType('support', 'external', audienceValue, needValue);
+        const p = selectByType('proof', 'external', audienceValue, needValue);
+        combined = {
+          selections: l.selections.concat(s.selections, p.selections),
+          gaps: l.gaps.concat(s.gaps, p.gaps)
+        };
+      } else {
+        combined = selectByType(typeKey, 'external', audienceValue, needValue);
       }
 
-      // The model is instructed to return only JSON, but sometimes adds a
-      // conversational preamble anyway ("I'll work through this...") before
-      // the actual object. Rather than relying on prompt compliance, pull
-      // out the {...} substring directly so a stray preamble can't break parsing.
-      function extractJSON(text) {
-        const stripped = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-        const start = stripped.indexOf('{');
-        const end = stripped.lastIndexOf('}');
-        if (start === -1 || end === -1 || end < start) {
-          throw new Error('No JSON object found in model response');
-        }
-        return JSON.parse(stripped.slice(start, end + 1));
-      }
+      const internalNotes = selectInternalNotes(audienceValue, needValue);
 
-      function runType(kind, audience) {
-        audience = audience || 'external';
-        return callAnthropic(buildSystemPrompt(kind, audience)).then(function(text) {
-          let parsedResult;
-          try { parsedResult = extractJSON(text); }
-          catch (e) { throw new Error('Model returned malformed JSON (' + kind + '): ' + e.message); }
-          const selections = (parsedResult.selections || []).map(function(sel) {
-            // Enforce verbatim: always serve the library's own text/source for the
-            // matched id rather than trusting whatever the model echoed back.
-            const lib = MESSAGE_LIBRARY[sel.id];
-            return (lib && lib.type === kind && lib.audience === audience) ? { id: sel.id, text: lib.text, source: lib.source, type: kind } : null;
-          }).filter(Boolean);
-          const gaps = parsedResult.gaps || [];
-          console.log('[API] ' + kind + '/' + audience + ' complete — selections:', selections.length, 'gaps:', gaps.length);
-          return { selections: selections, gaps: gaps };
-        });
-      }
+      console.log('[generate] type=' + typeKey + ' audience=' + (audienceValue || 'all') + ' need=' + (needValue || 'all') + ' \u2014 selections:', combined.selections.length, 'internalNotes:', internalNotes.length);
 
-      function runInternalNotes() {
-        return callAnthropic(buildInternalContextPrompt()).then(function(text) {
-          let parsedResult;
-          try { parsedResult = extractJSON(text); }
-          catch (e) { console.error('[API] internal notes malformed JSON:', e.message); return []; }
-          return (parsedResult.selections || []).map(function(sel) {
-            const lib = MESSAGE_LIBRARY[sel.id];
-            return (lib && lib.audience === 'internal') ? { id: sel.id, text: lib.text, source: lib.source, type: lib.type } : null;
-          }).filter(Boolean);
-        }).catch(function(err) {
-          console.error('[API] internal notes error (non-fatal):', err.message);
-          return [];
-        });
-      }
-
-      const work = typeKey === 'all'
-        ? Promise.all([runType('lead'), runType('support'), runType('proof')]).then(function(results) {
-            return {
-              selections: results[0].selections.concat(results[1].selections, results[2].selections),
-              gaps: results[0].gaps.concat(results[1].gaps, results[2].gaps)
-            };
-          })
-        : runType(typeKey);
-
-      Promise.all([work, runInternalNotes()]).then(function(res2) {
-        const combined = res2[0];
-        const internalNotes = res2[1];
-        const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps, internalNotes: internalNotes };
-        res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
-        res.end();
-      }).catch(function(err) {
-        res.write('event: error\ndata: ' + JSON.stringify({ error: err.message }) + '\n\n');
-        res.end();
-      });
+      const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps, internalNotes: internalNotes };
+      res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
+      res.end();
     });
     return;
   }
@@ -400,5 +339,6 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log('Roche AIM demo running at http://localhost:' + PORT);
-  console.log('API key:', API_KEY ? 'YES (' + API_KEY.slice(0,16) + '...)' : 'NOT SET');
+  console.log('Content selection is fully deterministic (no API key required for this).');
+  console.log('Anthropic API key:', API_KEY ? 'YES (' + API_KEY.slice(0,16) + '...) \u2014 ready for future generative features' : 'NOT SET \u2014 fine for now, needed once generative features are added');
 });
