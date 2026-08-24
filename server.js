@@ -25,62 +25,76 @@ const DECK_PDF_PATH = path.join(__dirname, 'reference-deck.pdf');
 //            relatedLead — i.e. only surfaced once a lead has been chosen,
 //            never independently tag-matched on its own.
 // - proof:   case studies / stories related to a lead + its support,
-//            selected the same way via relatedLead. The infographic bridge
-//            is always appended in addition, since it covers the full study.
+//            selected the same way via relatedLead.
+//
+// audience: "external" entries are safe candidates for customer-facing
+// messaging output (Lead/Support/Proof). "internal" entries are Roche's own
+// research findings, diagnoses, or internal action recommendations — useful
+// context, but never to be copied into anything customer-facing. Most of
+// this deck is internal, since it is a CX research analysis document, not a
+// messaging source: nearly every "lead"-type statement here is a research
+// finding or internal directive ("we must...", "Roche can unlock...",
+// "Executives are less likely to recommend Roche…"), and both case studies
+// describe Roche's own internal process, not a story told to customers.
 const MESSAGE_LIBRARY = {
-  "CRR-06a": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6", buyingInfluence: ["clinical","financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-07a": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["operational-excellence-uptime","communication-transparency"] },
-  "CRR-09a": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9", buyingInfluence: ["clinical"], customerChallenge: ["product-technical"] },
-  "CRR-09b": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9", buyingInfluence: ["clinical","financial"], customerChallenge: ["product-technical"] },
-  "CRR-11a": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11", buyingInfluence: ["operational","financial"], customerChallenge: ["communication-transparency"] },
-  "CRR-12a": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-12b": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-14a": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-15a": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
-  "CRR-16a": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-17a": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-19": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19", buyingInfluence: ["operational","clinical"], customerChallenge: ["operational-excellence-uptime"] },
-  "CRR-34a": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership","product-technical"] },
-  "CRR-34b": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","access-to-innovation"] },
-  "CRR-34c": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
-  "CRR-34d": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
+  "CRR-06a": { type: "lead", audience: "internal", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6", buyingInfluence: ["clinical","financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-06e": { type: "lead", audience: "external", text: "Promoter accounts renew 90% more often than Detractors", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-06f": { type: "lead", audience: "external", text: "Promoter accounts have a 53% higher win rate than Detractors", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-06g": { type: "lead", audience: "external", text: "Promoter accounts generate ~58% of the revenue", source: "Slide 6", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-07a": { type: "lead", audience: "internal", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["operational-excellence-uptime","communication-transparency"] },
+  "CRR-07d": { type: "lead", audience: "external", text: "88% Overall satisfaction with Roche", source: "Slide 7", buyingInfluence: ["clinical","operational","financial"], customerChallenge: ["product-technical"] },
+  "CRR-07e": { type: "lead", audience: "external", text: "89% Believe Roche is a true partner", source: "Slide 7", buyingInfluence: ["clinical","operational","financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-09a": { type: "lead", audience: "internal", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9", buyingInfluence: ["clinical"], customerChallenge: ["product-technical"] },
+  "CRR-09b": { type: "lead", audience: "internal", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9", buyingInfluence: ["clinical","financial"], customerChallenge: ["product-technical"] },
+  "CRR-11a": { type: "lead", audience: "internal", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11", buyingInfluence: ["operational","financial"], customerChallenge: ["communication-transparency"] },
+  "CRR-12a": { type: "lead", audience: "internal", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-12b": { type: "lead", audience: "internal", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-14a": { type: "lead", audience: "internal", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14", buyingInfluence: ["financial"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-15a": { type: "lead", audience: "internal", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
+  "CRR-16a": { type: "lead", audience: "internal", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-17a": { type: "lead", audience: "internal", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-19": { type: "lead", audience: "internal", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19", buyingInfluence: ["operational","clinical"], customerChallenge: ["operational-excellence-uptime"] },
+  "CRR-34a": { type: "lead", audience: "internal", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership","product-technical"] },
+  "CRR-34b": { type: "lead", audience: "internal", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","access-to-innovation"] },
+  "CRR-34c": { type: "lead", audience: "internal", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization","barriers-to-digital-adoption"] },
+  "CRR-34d": { type: "lead", audience: "internal", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
 
-  "CRR-06b": { type: "support", relatedLead: ["CRR-06a"], text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote", buyingInfluence: ["clinical"], customerChallenge: ["strategic-partnership","product-technical"] },
-  "CRR-06c": { type: "support", relatedLead: ["CRR-06a"], text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-06d": { type: "support", relatedLead: ["CRR-06a"], text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
-  "CRR-07b": { type: "support", relatedLead: ["CRR-07a"], text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7", buyingInfluence: ["clinical","operational"], customerChallenge: ["product-technical","strategic-partnership"] },
-  "CRR-07c": { type: "support", relatedLead: ["CRR-07a","CRR-34c"], text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-11b": { type: "support", relatedLead: ["CRR-11a"], text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","access-to-innovation"] },
-  "CRR-12c": { type: "support", relatedLead: ["CRR-12a","CRR-12b"], text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote", buyingInfluence: ["operational"], customerChallenge: ["barriers-to-digital-adoption","managing-staff-shortages"] },
-  "CRR-14b": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions"] },
-  "CRR-14c": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs", buyingInfluence: ["operational"], customerChallenge: ["automation-digitalization","managing-staff-shortages"] },
-  "CRR-14d": { type: "support", relatedLead: ["CRR-14a"], text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-14e": { type: "support", relatedLead: ["CRR-14a","CRR-15a"], text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","managing-staff-shortages"] },
-  "CRR-15b": { type: "support", relatedLead: ["CRR-15a"], text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
-  "CRR-15c": { type: "support", relatedLead: ["CRR-15a","CRR-34d"], text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","reagent-waste-packaging"] },
-  "CRR-16b": { type: "support", relatedLead: ["CRR-16a"], text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","cost-effective-right-sized-solutions"] },
-  "CRR-16c": { type: "support", relatedLead: ["CRR-16a","CRR-34c"], text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["automation-digitalization"] },
-  "CRR-17b": { type: "support", relatedLead: ["CRR-17a"], text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17", buyingInfluence: ["financial","operational"], customerChallenge: ["automation-digitalization","cost-effective-right-sized-solutions"] },
-  "CRR-17c": { type: "support", relatedLead: ["CRR-17a","CRR-34b"], text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["access-to-innovation"] },
-  "CRR-17d": { type: "support", relatedLead: ["CRR-17a"], text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","commercial-procurement-flexibility"] },
-  "CRR-20": { type: "support", relatedLead: ["CRR-11a","CRR-34d"], text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
-  "CRR-21": { type: "support", relatedLead: ["CRR-17a","CRR-34b"], text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21", buyingInfluence: ["financial"], customerChallenge: ["commercial-procurement-flexibility"] },
-  "CRR-22": { type: "support", relatedLead: ["CRR-19"], text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22", buyingInfluence: ["operational"], customerChallenge: ["infrastructure-space-constraints"] },
-  "CRR-23": { type: "support", relatedLead: ["CRR-19"], text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23", buyingInfluence: ["operational"], customerChallenge: ["training-expertise","managing-staff-shortages"] },
-  "CRR-24": { type: "support", relatedLead: ["CRR-09a","CRR-19"], text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions","reagent-waste-packaging"] },
-  "CRR-25": { type: "support", relatedLead: ["CRR-15a","CRR-19"], text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability"] },
-  "CRR-26": { type: "support", relatedLead: ["CRR-15a","CRR-19"], text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","communication-transparency"] },
-  "CRR-27a": { type: "support", relatedLead: ["CRR-17a","CRR-19"], text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27", buyingInfluence: ["financial","operational"], customerChallenge: ["strategic-partnership"] },
-  "CRR-27b": { type: "support", relatedLead: ["CRR-17a","CRR-19"], text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote", buyingInfluence: ["operational"], customerChallenge: ["strategic-partnership"] },
+  "CRR-06b": { type: "support", audience: "external", relatedLead: ["CRR-06a"], text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote", buyingInfluence: ["clinical"], customerChallenge: ["strategic-partnership","product-technical"] },
+  "CRR-06c": { type: "support", audience: "external", relatedLead: ["CRR-06a"], text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote", buyingInfluence: ["clinical","financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-06d": { type: "support", audience: "external", relatedLead: ["CRR-06a"], text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership"] },
+  "CRR-07b": { type: "support", audience: "internal", relatedLead: ["CRR-07a"], text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7", buyingInfluence: ["clinical","operational"], customerChallenge: ["product-technical","strategic-partnership"] },
+  "CRR-07c": { type: "support", audience: "internal", relatedLead: ["CRR-07a","CRR-34c"], text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-11b": { type: "support", audience: "internal", relatedLead: ["CRR-11a"], text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","access-to-innovation"] },
+  "CRR-12c": { type: "support", audience: "internal", relatedLead: ["CRR-12a","CRR-12b"], text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote", buyingInfluence: ["operational"], customerChallenge: ["barriers-to-digital-adoption","managing-staff-shortages"] },
+  "CRR-14b": { type: "support", audience: "internal", relatedLead: ["CRR-14a"], text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions"] },
+  "CRR-14c": { type: "support", audience: "internal", relatedLead: ["CRR-14a"], text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs", buyingInfluence: ["operational"], customerChallenge: ["automation-digitalization","managing-staff-shortages"] },
+  "CRR-14d": { type: "support", audience: "internal", relatedLead: ["CRR-14a"], text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs", buyingInfluence: ["operational","financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-14e": { type: "support", audience: "internal", relatedLead: ["CRR-14a","CRR-15a"], text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","managing-staff-shortages"] },
+  "CRR-15b": { type: "support", audience: "internal", relatedLead: ["CRR-15a"], text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","operational-excellence-uptime"] },
+  "CRR-15c": { type: "support", audience: "internal", relatedLead: ["CRR-15a","CRR-34d"], text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency","reagent-waste-packaging"] },
+  "CRR-16b": { type: "support", audience: "internal", relatedLead: ["CRR-16a"], text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","cost-effective-right-sized-solutions"] },
+  "CRR-16c": { type: "support", audience: "internal", relatedLead: ["CRR-16a","CRR-34c"], text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives", buyingInfluence: ["financial"], customerChallenge: ["automation-digitalization"] },
+  "CRR-17b": { type: "support", audience: "internal", relatedLead: ["CRR-17a"], text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17", buyingInfluence: ["financial","operational"], customerChallenge: ["automation-digitalization","cost-effective-right-sized-solutions"] },
+  "CRR-17c": { type: "support", audience: "internal", relatedLead: ["CRR-17a","CRR-34b"], text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["access-to-innovation"] },
+  "CRR-17d": { type: "support", audience: "internal", relatedLead: ["CRR-17a"], text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17", buyingInfluence: ["financial"], customerChallenge: ["strategic-partnership","commercial-procurement-flexibility"] },
+  "CRR-20": { type: "support", audience: "internal", relatedLead: ["CRR-11a","CRR-34d"], text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote", buyingInfluence: ["operational"], customerChallenge: ["communication-transparency"] },
+  "CRR-21": { type: "support", audience: "internal", relatedLead: ["CRR-17a","CRR-34b"], text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21", buyingInfluence: ["financial"], customerChallenge: ["commercial-procurement-flexibility"] },
+  "CRR-22": { type: "support", audience: "internal", relatedLead: ["CRR-19"], text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22", buyingInfluence: ["operational"], customerChallenge: ["infrastructure-space-constraints"] },
+  "CRR-23": { type: "support", audience: "internal", relatedLead: ["CRR-19"], text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23", buyingInfluence: ["operational"], customerChallenge: ["training-expertise","managing-staff-shortages"] },
+  "CRR-24": { type: "support", audience: "internal", relatedLead: ["CRR-09a","CRR-19"], text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24", buyingInfluence: ["financial"], customerChallenge: ["cost-effective-right-sized-solutions","reagent-waste-packaging"] },
+  "CRR-25": { type: "support", audience: "internal", relatedLead: ["CRR-15a","CRR-19"], text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability"] },
+  "CRR-26": { type: "support", audience: "internal", relatedLead: ["CRR-15a","CRR-19"], text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26", buyingInfluence: ["operational"], customerChallenge: ["service-logistics-reliability","communication-transparency"] },
+  "CRR-27a": { type: "support", audience: "internal", relatedLead: ["CRR-17a","CRR-19"], text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27", buyingInfluence: ["financial","operational"], customerChallenge: ["strategic-partnership"] },
+  "CRR-27b": { type: "support", audience: "internal", relatedLead: ["CRR-17a","CRR-19"], text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote", buyingInfluence: ["operational"], customerChallenge: ["strategic-partnership"] },
 
-  "CRR-29a": { type: "proof", relatedLead: ["CRR-34c","CRR-34d"], text: "How China is using the CRR to shape their 2026 strategy", source: "Slide 29, case study" },
-  "CRR-29b": { type: "proof", relatedLead: ["CRR-34c","CRR-34d"], text: "289 responses, 97% response rate \u2014 among the highest globally", source: "Slide 29, case study" },
-  "CRR-29c": { type: "proof", relatedLead: ["CRR-34a","CRR-34d"], text: "Enhancing the TOP account experience through CRR helps better secure China's business", source: "Slide 29, quote \u2014 Carolin Wang, Service Strategy & Transformation, China" },
-  "CRR-31a": { type: "proof", relatedLead: ["CRR-34d","CRR-17a"], text: "How Brazil is using CRR to drive action", source: "Slide 31, case study" },
-  "CRR-31b": { type: "proof", relatedLead: ["CRR-34d"], text: "Brazil conducted in-depth CRR interviews with strategic accounts to assess relationships and capture key feedback.", source: "Slide 31, case study" },
-  "CRR-31c": { type: "proof", relatedLead: ["CRR-34c"], text: "They identified systemic challenges and defined high-level initiatives together with cross-functional leadership to drive improvements.", source: "Slide 31, case study" },
-  "CRR-31d": { type: "proof", relatedLead: ["CRR-17a","CRR-34b"], text: "Brazil developed account reports, collaborated with account teams to prioritize actions, and formalized objectives, impact, owners, and timelines.", source: "Slide 31, case study" },
-  "CRR-31e": { type: "proof", relatedLead: ["CRR-34d","CRR-17a"], text: "Finally, they shared findings and action plans with customers and validated next steps, which reinforced transparency and strengthened partnerships.", source: "Slide 31, case study" }
+  "CRR-29a": { type: "proof", audience: "internal", relatedLead: ["CRR-34c","CRR-34d"], text: "How China is using the CRR to shape their 2026 strategy", source: "Slide 29, case study" },
+  "CRR-29b": { type: "proof", audience: "internal", relatedLead: ["CRR-34c","CRR-34d"], text: "289 responses, 97% response rate \u2014 among the highest globally", source: "Slide 29, case study" },
+  "CRR-29c": { type: "proof", audience: "internal", relatedLead: ["CRR-34a","CRR-34d"], text: "Enhancing the TOP account experience through CRR helps better secure China's business", source: "Slide 29, quote \u2014 Carolin Wang, Service Strategy & Transformation, China" },
+  "CRR-31a": { type: "proof", audience: "internal", relatedLead: ["CRR-34d","CRR-17a"], text: "How Brazil is using CRR to drive action", source: "Slide 31, case study" },
+  "CRR-31b": { type: "proof", audience: "internal", relatedLead: ["CRR-34d"], text: "Brazil conducted in-depth CRR interviews with strategic accounts to assess relationships and capture key feedback.", source: "Slide 31, case study" },
+  "CRR-31c": { type: "proof", audience: "internal", relatedLead: ["CRR-34c"], text: "They identified systemic challenges and defined high-level initiatives together with cross-functional leadership to drive improvements.", source: "Slide 31, case study" },
+  "CRR-31d": { type: "proof", audience: "internal", relatedLead: ["CRR-17a","CRR-34b"], text: "Brazil developed account reports, collaborated with account teams to prioritize actions, and formalized objectives, impact, owners, and timelines.", source: "Slide 31, case study" },
+  "CRR-31e": { type: "proof", audience: "internal", relatedLead: ["CRR-34d","CRR-17a"], text: "Finally, they shared findings and action plans with customers and validated next steps, which reinforced transparency and strengthened partnerships.", source: "Slide 31, case study" }
 };
 
 function contentTypeKey(label) {
@@ -101,15 +115,23 @@ function libraryBlock(entries) {
   }).join('\n---\n');
 }
 
-function buildSystemPrompt(typeKey) {
+function buildSystemPrompt(typeKey, audience) {
+  audience = audience || 'external';
+  // The LEAD LIBRARY used as reference context always includes both internal
+  // and external leads (it's for relevance-matching only, never returned
+  // directly for support/proof calls).
   const leadEntries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === 'lead');
   const leadLibrary = libraryBlock(leadEntries);
 
   if (typeKey === 'lead') {
-    const library = libraryBlock(leadEntries);
+    const entries = leadEntries.filter(([, m]) => m.audience === audience);
+    const library = libraryBlock(entries);
+    const audienceNote = audience === 'internal'
+      ? 'These are Roche\u2019s own internal research findings and strategic directives \u2014 useful context, never to be copied into customer-facing material.'
+      : 'These are the entries safe to use as customer-facing content.';
     return `You are retrieving content for Roche Diagnostics from a single approved source: the Global Customer Relationship Study 2025 deck. This is a verbatim-retrieval task, not a writing task.
 
-A LEAD MESSAGE is the highest-level statement relevant to the query.
+A LEAD MESSAGE is the highest-level statement relevant to the query. ${audienceNote}
 
 ABSOLUTE RULES:
 - You may ONLY reproduce the "Text" field of library entries below, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
@@ -129,20 +151,24 @@ ${library}`;
   }
 
   // support / proof: two-stage. First identify which lead(s) fit the requested
-  // context (using the lead library for reference only \u2014 never return these
-  // directly), then return only target-type entries whose relatedLead links to
-  // those leads. This is what "substantiates the lead message" / "related to
-  // the lead message and support" means in practice.
-  const targetEntries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === typeKey);
+  // context (using the full lead library \u2014 internal or external, reference
+  // only), then return only target-type entries of the requested audience
+  // whose relatedLead links to those leads. This is what "substantiates the
+  // lead message" / "related to the lead message and support" means in
+  // practice.
+  const targetEntries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.type === typeKey && m.audience === audience);
   const targetLibrary = libraryBlock(targetEntries);
   const kindNoun = typeKey === 'proof' ? 'PROOF (case studies / stories)' : 'SUPPORT (substantiating detail)';
   const kindDefinition = typeKey === 'proof'
     ? 'PROOF is a case study or story related to the lead message and its support \u2014 evidence that the message plays out in the real world.'
     : 'SUPPORT is detail that substantiates a lead message \u2014 it only exists in service of a lead, never independently.';
+  const audienceNote = audience === 'internal'
+    ? 'These are Roche\u2019s own internal research findings and strategic directives \u2014 useful context, never to be copied into customer-facing material.'
+    : 'These are the entries safe to use as customer-facing content.';
 
   return `You are retrieving content for Roche Diagnostics from a single approved source: the Global Customer Relationship Study 2025 deck. This is a verbatim-retrieval task, not a writing task.
 
-${kindDefinition}
+${kindDefinition} ${audienceNote}
 
 PROCESS (do this internally \u2014 only the final list matters):
 1. Using the LEAD LIBRARY below (reference only, do not return these), identify which lead(s) best fit the requested buying influence and customer need.
@@ -166,6 +192,34 @@ ${leadLibrary}
 
 ${kindNoun} LIBRARY (select only from this list):
 ${targetLibrary}`;
+}
+
+// Internal-facing statements are supplementary context, not the deliverable
+// itself, so they're matched directly by tag (no relatedLead requirement)
+// across all types \u2014 unlike external Lead/Support/Proof, internal notes
+// aren't organized around "which lead does this substantiate."
+function buildInternalContextPrompt() {
+  const entries = Object.entries(MESSAGE_LIBRARY).filter(([, m]) => m.audience === 'internal');
+  const library = libraryBlock(entries);
+
+  return `You are surfacing INTERNAL-ONLY context from Roche's Global Customer Relationship Study 2025 deck, for Roche's internal team \u2014 not for customer-facing use.
+
+These are Roche's own research findings, diagnoses, and internal strategic recommendations. They must NEVER be copied into customer-facing material \u2014 they exist here purely to give the internal team useful background on why certain external messaging choices make sense.
+
+ABSOLUTE RULES:
+- You may ONLY reproduce the "Text" field of library entries below, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
+- Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
+- Select entries whose buying influence and/or customer challenge tags best match the requested context. If several fit, prefer the closer match.
+- If nothing reasonably matches, return an empty selections array rather than forcing a loosely related entry.
+- Return ONLY valid JSON, no markdown fences, no preamble.
+
+JSON structure:
+{
+  "selections": [ { "id": "CRR-XX", "text": "exact verbatim text copied from the entry, unchanged", "source": "exact source field copied from the entry" } ]
+}
+
+INTERNAL LIBRARY:
+${library}`;
 }
 
 function sendJSON(res, status, obj) {
@@ -269,8 +323,9 @@ const server = http.createServer((req, res) => {
         });
       }
 
-      function runType(kind) {
-        return callAnthropic(buildSystemPrompt(kind)).then(function(text) {
+      function runType(kind, audience) {
+        audience = audience || 'external';
+        return callAnthropic(buildSystemPrompt(kind, audience)).then(function(text) {
           const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
           let parsedResult;
           try { parsedResult = JSON.parse(clean); }
@@ -279,11 +334,27 @@ const server = http.createServer((req, res) => {
             // Enforce verbatim: always serve the library's own text/source for the
             // matched id rather than trusting whatever the model echoed back.
             const lib = MESSAGE_LIBRARY[sel.id];
-            return (lib && lib.type === kind) ? { id: sel.id, text: lib.text, source: lib.source, type: kind } : null;
+            return (lib && lib.type === kind && lib.audience === audience) ? { id: sel.id, text: lib.text, source: lib.source, type: kind } : null;
           }).filter(Boolean);
           const gaps = parsedResult.gaps || [];
-          console.log('[API] ' + kind + ' complete — selections:', selections.length, 'gaps:', gaps.length);
+          console.log('[API] ' + kind + '/' + audience + ' complete — selections:', selections.length, 'gaps:', gaps.length);
           return { selections: selections, gaps: gaps };
+        });
+      }
+
+      function runInternalNotes() {
+        return callAnthropic(buildInternalContextPrompt()).then(function(text) {
+          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+          let parsedResult;
+          try { parsedResult = JSON.parse(clean); }
+          catch (e) { console.error('[API] internal notes malformed JSON:', e.message); return []; }
+          return (parsedResult.selections || []).map(function(sel) {
+            const lib = MESSAGE_LIBRARY[sel.id];
+            return (lib && lib.audience === 'internal') ? { id: sel.id, text: lib.text, source: lib.source, type: lib.type } : null;
+          }).filter(Boolean);
+        }).catch(function(err) {
+          console.error('[API] internal notes error (non-fatal):', err.message);
+          return [];
         });
       }
 
@@ -296,8 +367,10 @@ const server = http.createServer((req, res) => {
           })
         : runType(typeKey);
 
-      work.then(function(combined) {
-        const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps };
+      Promise.all([work, runInternalNotes()]).then(function(res2) {
+        const combined = res2[0];
+        const internalNotes = res2[1];
+        const result = { contentType: typeKey, selections: combined.selections, gaps: combined.gaps, internalNotes: internalNotes };
         res.write('event: result\ndata: ' + JSON.stringify({ result }) + '\n\n');
         res.end();
       }).catch(function(err) {
