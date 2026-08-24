@@ -48,6 +48,7 @@
   .field-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
   .field-select { appearance: none; background: rgba(255,255,255,0.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 14px center; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; padding: 10px 36px 10px 14px; width: 100%; cursor: pointer; transition: border-color 0.15s; }
   .field-select:focus { outline: none; border-color: rgba(255,255,255,0.4); }
+  .field-select:disabled { opacity: 0.4; cursor: not-allowed; color: rgba(255,255,255,0.5); }
   .field-select option { background: var(--blue-deeper); color: #fff; }
   .generate-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 6px; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; }
   .generate-btn:hover { background: var(--blue-dark); }
@@ -358,7 +359,8 @@
     </div>
     <div class="field-group">
       <label class="field-label" for="deliverable">Deliverable type</label>
-      <select class="field-select" id="deliverable">
+      <select class="field-select" id="deliverable" disabled>
+        <option value="all">All</option>
         <option value="sales-deck">Sales deck</option>
         <option value="ad-campaign">Ad campaign</option>
         <option value="social-captions">Social captions</option>
@@ -367,40 +369,70 @@
       </select>
     </div>
     <div class="field-group">
-      <label class="field-label" for="audience">Buying influence</label>
-      <select class="field-select" id="audience">
-        <option value="clinical">Clinical (clinician / lab director)</option>
-        <option value="operational">Operational (lab manager / IT)</option>
-        <option value="financial">Financial (economic buyer / CFO)</option>
-        <option value="c-suite">C-suite</option>
-      </select>
-    </div>
-    <div class="field-group">
-      <label class="field-label" for="topic">Topic / cluster</label>
-      <select class="field-select" id="topic">
-        <option value="collaborative-innovation">Collaborative innovation</option>
-        <option value="breadth-platform">Breadth &amp; platform</option>
-        <option value="pharma-dx-integration">Pharma + Dx integration</option>
-        <option value="partner-ecosystem">Partner ecosystem</option>
+      <label class="field-label" for="topics">Topics</label>
+      <select class="field-select" id="topics">
+        <option value="clinical" disabled>Clinical</option>
+        <option value="innovation" selected>Innovation</option>
+        <option value="collaboration" disabled>Collaboration</option>
+        <option value="neurology" disabled>Neurology</option>
+        <option value="core-lab" disabled>Core Lab</option>
       </select>
     </div>
     <div class="field-group">
       <label class="field-label" for="disease">Disease area</label>
       <select class="field-select" id="disease">
-        <option value="neurology">Neurology</option>
-        <option value="oncology">Oncology</option>
-        <option value="infectious-disease">Infectious disease</option>
-        <option value="cardiometabolic">Cardiometabolic</option>
-        <option value="womens-health">Women's health</option>
+        <option value="infectious-disease">Infectious Disease</option>
+        <option value="neurology" disabled>Neurology</option>
+        <option value="oncology" disabled>Oncology</option>
       </select>
     </div>
     <div class="field-group">
-      <label class="field-label" for="values">Values layer</label>
-      <select class="field-select" id="values">
-        <option value="ai-digital">AI &amp; Digital</option>
-        <option value="sustainability">Sustainability</option>
-        <option value="global-access">Global access</option>
-        <option value="none">None</option>
+      <label class="field-label" for="audience">Buying influence</label>
+      <select class="field-select" id="audience">
+        <option value="operational">Operational</option>
+        <option value="financial">Financial</option>
+        <option value="clinical">Clinical</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="customerNeed">Customer challenge</label>
+      <select class="field-select" id="customerNeed">
+        <option value="automation-digitalization">Automation &amp; Digitalization</option>
+        <option value="managing-staff-shortages">Managing Staff Shortages</option>
+        <option value="strategic-partnership">Strategic Partnership</option>
+        <option value="operational-excellence-uptime">Operational Excellence &amp; Uptime</option>
+        <option value="access-to-innovation">Access to Innovation</option>
+        <option value="cost-effective-right-sized-solutions">Cost-Effective &amp; Right-Sized Solutions</option>
+        <option value="training-expertise">Training &amp; Expertise</option>
+        <option value="product-technical">Product &amp; Technical</option>
+        <option value="service-logistics-reliability">Service &amp; Logistics Reliability</option>
+        <option value="commercial-procurement-flexibility">Commercial &amp; Procurement Flexibility</option>
+        <option value="communication-transparency">Communication &amp; Transparency</option>
+        <option value="reagent-waste-packaging">Reagent Waste &amp; Packaging</option>
+        <option value="barriers-to-digital-adoption">Barriers to Digital Adoption</option>
+        <option value="infrastructure-space-constraints">Infrastructure &amp; Space Constraints</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="portfolio">Portfolio</label>
+      <select class="field-select" id="portfolio">
+        <option value="near-patient-care">Near Patient Care</option>
+        <option value="molecular-lab">Molecular Lab</option>
+        <option value="core-lab">Core Lab</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="product">Product</label>
+      <select class="field-select" id="product">
+        <option value="cobas-liat">Cobas Liat</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="contentType">Content type</label>
+      <select class="field-select" id="contentType">
+        <option value="lead-message">Lead Message</option>
+        <option value="support">Support</option>
+        <option value="proof">Proof</option>
       </select>
     </div>
     <button class="generate-btn" id="generateBtn" onclick="runAgent()">
@@ -457,14 +489,49 @@
 
 <script>
 const MESSAGE_LIBRARY = {
-  "CM-09": { headline: "The only company with Pharma and Dx under one roof", support: "The integration of Roche Pharma and Roche Diagnostics is not structural convenience; it is a unique strategic asset. Insights from one division accelerate breakthroughs in the other, creating a flywheel no standalone diagnostics company can replicate.", role: "Uniquely ownable — no competitor can claim this. Frames the Roche partnership as access to a combined Pharma + Diagnostics intelligence engine. Most powerful in oncology, neurology, and companion diagnostics contexts.", proof: "Companion diagnostics for 60%+ of oncology decisions · Pharma + Dx co-development pipeline including SBX and CDx", tags: ["c-suite","lab-director","unified-roche","oncology","neurology","cdx","pharma-dx-integration","collaborative-innovation"] },
-  "CM-10": { headline: "We co-create with the people who use our solutions", support: "Our innovations emerge from deep collaboration with clinicians, lab scientists, hospital systems, universities, and biotech partners — not from assumptions made in isolation. The best ideas come from inside the lab, and we listen.", role: "Addresses the frustration that vendors design in boardrooms, not labs. Repositions Roche as a genuine partner that designs with customers, not for them.", proof: "20+ AI algorithm partners in navify open environment · Active in-licensing agreements across 133+ partnerships", tags: ["lab-director","lab-manager","clinician","co-creation","collaborative-innovation","ai-digital","neurology","oncology"] },
-  "CM-11": { headline: "We collaborate with 250+ external partners because no one has all the answers", support: "Innovation at the pace healthcare demands requires us to reach beyond our own walls. Through alliances with universities, health systems, biotech firms, and AI companies, we stay connected to the leading edge of global science — wherever it emerges.", role: "Expands the collaboration message from internal Roche synergy to the wider partner network.", proof: "250+ external R&D alliances · 133 active in-licensing agreements · 327 active out-licensing agreements", tags: ["c-suite","lab-director","ecosystem","co-creation","collaborative-innovation","ai-digital","partner-ecosystem","neurology"] },
-  "CM-12": { headline: "Diverse perspectives are how we find answers nobody else is looking for", support: "Healthcare is global, its challenges are varied, and its solutions must reflect that. We deliberately bring together different disciplines, geographies, and lived experiences because the most important diagnostic breakthroughs are rarely found from a single vantage point.", role: "Brings the people and culture dimension into the innovation narrative.", proof: "~40,000 employees in 100+ countries · Global Access programs in cervical cancer and infectious disease", tags: ["c-suite","clinician","people-culture","co-creation","collaborative-innovation","global-access","neurology","sustainability"] },
-  "CM-13": { headline: "One platform, every dimension of the lab", support: "From core lab automation to molecular diagnostics, digital pathology, near-patient care, and data intelligence — Roche Diagnostics offers an integrated ecosystem that no patchwork of point solutions can match.", role: "Answers the C-suite question about consolidation risk and the economic buyer's concern about managing multiple vendor lifecycles.", proof: ">100,000 installed instruments worldwide · >5,000 lab & POC software deployments · navify covers core lab, molecular, pathology, POC", tags: ["c-suite","lab-director","economic-buyer","ecosystem","breadth-platform","ai-digital","oncology","neurology"] },
-  "CM-14": { headline: "Innovation that works at scale — and in the smallest lab", support: "Whether you are a national reference laboratory or a regional hospital, our solutions are designed to perform with the same rigour. We democratise access to sophisticated diagnostics, not just for the few.", role: "Counters the perception that Roche innovation is only for large institutions.", proof: "LumiraDx POC platform for decentralised settings · HPV Global Access Program · cobas vital for smaller labs", tags: ["lab-director","lab-manager","economic-buyer","breadth-platform","global-access","sustainability","infectious-disease"] },
-  "CM-15": { headline: "A portfolio this broad means fewer gaps in your care pathway", support: "With solutions spanning oncology, neurology, infectious disease, cardiometabolic, women's health, and diabetes management, Roche covers the disease areas that matter most.", role: "Reframes portfolio breadth as a clinical care continuity argument, not a product catalogue.", proof: "Coverage: Oncology · Neurology · Infectious disease · Cardiometabolic · Women's health · Diabetes · >500 assays", tags: ["c-suite","lab-director","portfolio-breadth","breadth-platform","neurology","oncology","cardiometabolic","womens-health"] },
-  "CM-16": { headline: "Consolidating to Roche is a decision that compounds in value over time", support: "Every new Roche solution you add connects to what you already have. Our open, integrated architecture means that moving from one instrument to a full ecosystem is not a rip-and-replace — it is a compounding return on a single strategic decision.", role: "Reframes consolidation not as vendor lock-in but as a compounding investment.", proof: "cobas ultra extensible platform · navify modular suite — add capabilities without replacing infrastructure · >6,500 navify customers", tags: ["economic-buyer","lab-director","tco","ecosystem","breadth-platform","ai-digital"] }
+  "CRR-01": { type: "lead", text: "Customer relationships matter because they drive loyalty and real commercial impact", source: "Slide 6" },
+  "CRR-02": { type: "lead", text: "Strong relationships, with opportunities to strengthen operations, communication, and future growth", source: "Slide 7" },
+  "CRR-03": { type: "lead", text: "Customers praise our people and products but highlight areas to improve", source: "Slide 9" },
+  "CRR-04": { type: "lead", text: "60% of our customers would recommend Roche; only 8% would not", source: "Slide 9" },
+  "CRR-05": { type: "lead", text: "Customers link transparent and proactive communication to their ability to plan ahead, innovate and grow", source: "Slide 11" },
+  "CRR-06": { type: "lead", text: "Customers want digital solutions but integration and staff readiness block adoption", source: "Slide 12" },
+  "CRR-07": { type: "lead", text: "59% of customers want to explore optimising their lab workflows, and while 44% are interested in digital solutions to drive efficiency and growth they face major barriers", source: "Slide 12" },
+  "CRR-08": { type: "lead", text: "Large labs are less likely to recommend Roche\u2026", source: "Slide 14" },
+  "CRR-09": { type: "lead", text: "\u2026because operational inconsistencies can often turn into major failures", source: "Slide 15" },
+  "CRR-10": { type: "lead", text: "Executives are less likely to recommend Roche\u2026", source: "Slide 16" },
+  "CRR-11": { type: "lead", text: "\u2026and they wish for more engagement and strategic partnership", source: "Slide 17" },
+  "CRR-12": { type: "lead", text: "Overall experience along the customer journey is high with opportunities to improve", source: "Slide 19" },
+  "CRR-13": { type: "lead", text: "Foundation of trust: Customers rate Roche highly for reliable products and professional staff. With an NPS of +49 and 89% seeing us as a true partner, trust in our people and solutions is our biggest strength", source: "Slide 34" },
+  "CRR-14": { type: "lead", text: "Win the C-Suite: While quality is recognized, many executives perceive Roche as transactional. To win the C-Suite, we must position ourselves as a strategic partner, enabling efficiency and access to innovation", source: "Slide 34" },
+  "CRR-15": { type: "lead", text: "Enable future growth: Labs see strong potential in digital and AI-driven solutions, but face barriers with IT integration, budgets, and staff readiness. Roche can unlock adoption by reducing complexity, co-developing solutions, and supporting change management", source: "Slide 34" },
+  "CRR-16": { type: "lead", text: "Close the communication gap: Proactive, transparent updates on orders, service, and innovation are critical. Customers want early insights to better manage operations and plan long-term", source: "Slide 34" },
+  "CRR-17": { type: "support", text: "Over the 18 years of collaboration, I have been satisfied with the quality, durability of the equipment and reliability of Roche products, but the people I have interacted with are the main reason I recommend Roche", source: "Slide 6, customer quote" },
+  "CRR-18": { type: "support", text: "I did not buy from an equipment seller - I built a partnership with Roche - My Roche contacts are reliable people I trust", source: "Slide 6, customer quote" },
+  "CRR-19": { type: "support", text: "The relationship with Roche Diagnostics goes beyond the one included in the agreements. We are partners with whom we have been working together for many years.", source: "Slide 6, customer quote" },
+  "CRR-20": { type: "support", text: "Reliable products and accurate results provide a strong foundation of trust. Local teams' responsiveness and expertise strengthen partnerships.", source: "Slide 7" },
+  "CRR-21": { type: "support", text: "Facing growing pressures, labs seek simpler, automated, and digital solutions and expect Roche to act as the partner for enabling future growth.", source: "Slide 7" },
+  "CRR-22": { type: "support", text: "If the laboratory isn't aware of alternative solutions to work faster, it doesn't have the opportunity to fight to acquire them.", source: "Slide 11, customer quote" },
+  "CRR-23": { type: "support", text: "The biggest barriers are system integration, staff adaptation. Despite these, we're committed to advancing digital solutions because of their long-term value", source: "Slide 12, customer quote" },
+  "CRR-24": { type: "support", text: "Main Priority: Cost-effective solutions and expanding test menu while adopting new right-sized solutions.", source: "Slide 14, Small labs" },
+  "CRR-25": { type: "support", text: "Main Priority: Drive automation and efficiency to manage growth with limited staff.", source: "Slide 14, Medium labs" },
+  "CRR-26": { type: "support", text: "Main Priority: Standardize and digitalize (AI, DP, predictive analytics) for efficiency at scale.", source: "Slide 14, Large labs" },
+  "CRR-27": { type: "support", text: "Key Pain Point: Extended downtime caused by delayed parts and service staff shortages", source: "Slide 14, Large labs" },
+  "CRR-28": { type: "support", text: "Address operational frictions: Support labs with more predictive service, faster access to parts, and after-hours expertise to minimize disruptions.", source: "Slide 15" },
+  "CRR-29": { type: "support", text: "Enhance transparency: Provide early visibility into reagent supply issues and delays so labs can plan workflows and avoid last-minute crisis.", source: "Slide 15" },
+  "CRR-30": { type: "support", text: "Key Pain Point: High costs, slow processes, and perceived loss of strategic partnership", source: "Slide 16, Executives" },
+  "CRR-31": { type: "support", text: "Main Priorities: Drive efficiency and growth through digitalization, automation, and AI.", source: "Slide 16, Executives" },
+  "CRR-32": { type: "support", text: "Efficiency & Scalability: Help them manage growth and control costs with automation solutions, workflow consulting, and inventory tools to improve TAT", source: "Slide 17" },
+  "CRR-33": { type: "support", text: "Access to Innovation: Enable them to stay competitive with advanced tech, digital pathology, AI-driven workflows, and expanded menus.", source: "Slide 17" },
+  "CRR-34": { type: "support", text: "Strategic & Flexible Partnership: Strengthen partnership with transparent innovation pipeline, faster contracting, flexible commercial models and co-development opportunities", source: "Slide 17" },
+  "CRR-35": { type: "support", text: "This is precisely a difficulty because we lack communication. No proactive communication, no information on new products, no dedicated sales representative. It's difficult to have a contact person when you have a request for information or a price", source: "Slide 20, customer quote" },
+  "CRR-36": { type: "support", text: "Enhancing commercial and contractual flexibility. Customers feel the procurement process is often inflexible, with rigid pricing. This lack of flexibility makes it difficult to align with their internal processes and budgetary constraints.", source: "Slide 21" },
+  "CRR-37": { type: "support", text: "Addressing space and infrastructure challenges early. Labs frequently struggle with limited physical space for large equipment, a challenge often not addressed during pre-installation inspections. Delays are also caused by issues with a lab's own IT department", source: "Slide 22" },
+  "CRR-38": { type: "support", text: "Expanding training frequency and accessibility. Time constraints in 24/7 labs make it difficult to train all staff; customers ask for more refresher sessions and accessible online options.", source: "Slide 23" },
+  "CRR-39": { type: "support", text: "Making product offerings more flexible and cost-effective. High costs and large reagent pack sizes create waste and financial pressure, especially in lower-volume labs.", source: "Slide 24" },
+  "CRR-40": { type: "support", text: "Improving resolution consistency. While many issues are fixed quickly, others are delayed by spare part shortages, repeat visits, or hotline procedures that feel unnecessary for experienced staff.", source: "Slide 25" },
+  "CRR-41": { type: "support", text: "Improving delivery reliability and transparency: Despite many positive experiences, some customers report delays, backorders, and partial shipments that disrupt operations. They ask for earlier alerts on shortages and clearer, more reliable ETAs.", source: "Slide 26" },
+  "CRR-42": { type: "support", text: "Empowering representatives to act independently: Customers believe their representatives are personally capable, but are often restricted by rigid processes and internal hierarchies that slow decision-making.", source: "Slide 27" },
+  "CRR-43": { type: "support", text: "Your front line staff are GREAT... The problem is Roche does not empower them to make decisions", source: "Slide 27, customer quote" }
 };
 
 // Candidate pool — persists across sessions
@@ -561,8 +628,8 @@ function renderPool() {
     card.className = 'candidate-card' + (cand.status !== 'pending' ? ' ' + cand.status : '');
     card.id = 'cand-' + cand.id;
 
-    const typeLabel = cand.type === 'headline' ? 'Headline' : 'Body copy';
-    const typeCls = cand.type === 'headline' ? 'type-headline' : 'type-copy';
+    const typeLabel = cand.type === 'support' ? 'Support point' : 'Lead message';
+    const typeCls = cand.type === 'support' ? 'type-copy' : 'type-headline';
     const ctx = cand.context;
     const contextStr = [ctx.deliverable, ctx.audience, ctx.disease, ctx.values].filter(Boolean).join(' · ');
 
@@ -622,71 +689,33 @@ function reviewCandidate(id, status) {
 }
 
 function buildSystemPrompt() {
-  const library = Object.entries(MESSAGE_LIBRARY).map(([id, msg]) =>
-    '[' + id + ']\nHeadline: "' + msg.headline + '"\nSupport copy: "' + msg.support + '"\nMessaging role: ' + msg.role + '\nProof points: ' + msg.proof + '\nTags: ' + msg.tags.join(', ')
-  ).join('\n---\n');
-
-  return `You are a senior brand strategist at Roche Diagnostics working with the AIM Framework message library.
-
-Your task: produce a structured messaging brief for a specific deliverable.
-
-PROCESS:
-1. ANALYSE — Select the most relevant messages. For each, explain WHY it fits this specific audience, disease area, and values layer — reasoning about narrative fit and persuasion logic, not just tag matches.
-2. ARCHITECT — Recommend a slide/section structure with a narrative arc that mirrors how this specific buying influence builds trust.
-3. DRAFT — Write the deliverable. You may write connective tissue and headlines. Cite EVERY sentence and EVERY headline with either [CM-XX] for library-sourced content or [AI] for content you wrote. Headlines are not exempt — if you wrote the headline, tag it [AI]. If it comes verbatim from a library message headline, tag it with [CM-XX].
-4. GAP REPORT — Identify topics this audience would want that the library doesn't yet cover.
-
-RULES:
-- Never invent claims or statistics not in the library
-- Never paraphrase core messages in ways that change their meaning
-- EVERY headline must carry a citation — [CM-XX] if verbatim from library, [AI] if written by you
-- EVERY body copy sentence must carry a citation inline
-- priority must be exactly one of: lead, support, bridge, close
-- headline_source must be exactly: "library" if the headline is verbatim from a CM headline, "ai" if you wrote it
-
-Return ONLY valid JSON in this exact structure (no markdown, no preamble):
-{
-  "analysis": [
-    { "id": "CM-XX", "headline": "...", "rationale": "...", "priority": "lead" }
-  ],
-  "architecture": {
-    "arc": "one sentence describing the narrative arc",
-    "slides": [
-      {
-        "position": 1,
-        "label": "slide purpose",
-        "headline": "slide headline text",
-        "headline_source": "ai",
-        "copy": "body copy with [CM-XX] and [AI] citations inline after each sentence",
-        "visual_note": "visual direction",
-        "sources": ["CM-XX"]
-      }
-    ]
-  },
-  "gaps": [
-    { "title": "gap title", "description": "gap description" }
-  ]
-}
-
-MESSAGE LIBRARY:
-${library}`;
+  // Deprecated — generation now happens server-side in server.js against the
+  // Global Customer Relationship Study 2025 library (see MESSAGE_LIBRARY above,
+  // kept here only so candidate-pool cards can display source text/id).
+  return '';
 }
 
 async function runAgent() {
   const btn = document.getElementById('generateBtn');
   const deliverableEl = document.getElementById('deliverable');
   const audienceEl = document.getElementById('audience');
-  const topicEl = document.getElementById('topic');
+  const customerNeedEl = document.getElementById('customerNeed');
+  const topicsEl = document.getElementById('topics');
   const diseaseEl = document.getElementById('disease');
-  const valuesEl = document.getElementById('values');
+  const portfolioEl = document.getElementById('portfolio');
+  const productEl = document.getElementById('product');
+  const contentTypeEl = document.getElementById('contentType');
 
   const deliverableLabel = deliverableEl.options[deliverableEl.selectedIndex].text;
   const audienceLabel = audienceEl.options[audienceEl.selectedIndex].text;
-  const topicLabel = topicEl.options[topicEl.selectedIndex].text;
+  const customerNeedLabel = customerNeedEl.options[customerNeedEl.selectedIndex].text;
+  const topicsLabel = topicsEl.options[topicsEl.selectedIndex].text;
   const diseaseLabel = diseaseEl.options[diseaseEl.selectedIndex].text;
-  const valuesLabel = valuesEl.options[valuesEl.selectedIndex].text;
+  const portfolioLabel = portfolioEl.options[portfolioEl.selectedIndex].text;
+  const productLabel = productEl.options[productEl.selectedIndex].text;
+  const contentTypeLabel = contentTypeEl.options[contentTypeEl.selectedIndex].text;
 
-  currentContext = { deliverable: deliverableLabel, audience: audienceLabel, topic: topicLabel, disease: diseaseLabel, values: valuesLabel };
+  currentContext = { deliverable: deliverableLabel, audience: audienceLabel, customerNeed: customerNeedLabel, topics: topicsLabel, disease: diseaseLabel, portfolio: portfolioLabel, product: productLabel, contentType: contentTypeLabel };
 
   showView('brief');
   btn.disabled = true;
@@ -704,18 +733,21 @@ async function runAgent() {
     '<p class="output-eyebrow">Messaging recommendations</p>' +
     '<p class="output-query">' + deliverableLabel + ' &mdash; ' + audienceLabel + '</p>' +
     '<div class="output-tags">' +
-      '<span class="otag otag-blue">' + topicLabel + '</span>' +
+      '<span class="otag otag-blue">' + topicsLabel + '</span>' +
+      '<span class="otag otag-blue">' + customerNeedLabel + '</span>' +
       '<span class="otag otag-blue">' + diseaseLabel + '</span>' +
-      '<span class="otag otag-gray">' + valuesLabel + '</span>' +
+      '<span class="otag otag-blue">' + portfolioLabel + '</span>' +
+      '<span class="otag otag-blue">' + productLabel + '</span>' +
+      '<span class="otag otag-gray">' + contentTypeLabel + '</span>' +
     '</div>';
   outputContent.appendChild(headerEl);
 
   const steps = [
-    'Reading full message library (CM-09 through CM-16)\u2026',
-    'Identifying relevant clusters for this audience and context\u2026',
-    'Reasoning about narrative sequence and persuasion logic\u2026',
-    'Drafting copy with inline source citations\u2026',
-    'Flagging AI-generated content for library review\u2026'
+    'Reading Global Customer Relationship Study 2025 library\u2026',
+    'Matching entries to buying influence and customer need\u2026',
+    'Selecting verbatim text \u2014 no rewriting, no paraphrasing\u2026',
+    'Checking citations against source slides\u2026',
+    'Flagging any gaps in library coverage\u2026'
   ];
 
   const loadingWrap = document.createElement('div');
@@ -739,7 +771,7 @@ async function runAgent() {
     }
   }
 
-  const userPrompt = 'Generate a ' + deliverableLabel + ' for:\n- Buying influence: ' + audienceLabel + '\n- Topic / cluster: ' + topicLabel + '\n- Disease area: ' + diseaseLabel + '\n- Values layer: ' + valuesLabel + '\n\nAnalyse the full library, select the best messages with reasoning, architect a narrative sequence for this specific audience, draft copy with citations on every sentence and every headline, and identify gaps.';
+  const userPrompt = 'Generate a ' + deliverableLabel + ' for:\n- Buying influence: ' + audienceLabel + '\n- Topics: ' + topicsLabel + '\n- Customer need: ' + customerNeedLabel + '\n- Disease area: ' + diseaseLabel + '\n- Portfolio: ' + portfolioLabel + '\n- Product: ' + productLabel + '\n- Content type: ' + contentTypeLabel + '\n\nAnalyse the full library, select the best messages with reasoning, architect a narrative sequence for this specific audience, draft copy with citations on every sentence and every headline, and identify gaps.';
 
   let result;
   try {
@@ -749,9 +781,12 @@ async function runAgent() {
       body: JSON.stringify({
         deliverable: deliverableLabel,
         audience: audienceLabel,
-        topic: topicLabel,
+        topics: topicsLabel,
+        customerNeed: customerNeedLabel,
         disease: diseaseLabel,
-        values: valuesLabel
+        portfolio: portfolioLabel,
+        product: productLabel,
+        contentType: contentTypeLabel
       })
     });
     if (!response.ok) {
@@ -763,9 +798,7 @@ async function runAgent() {
     if (data.error) throw new Error(data.error);
     if (!data.result) throw new Error('Server returned empty result');
     result = data.result;
-    result.analysis = result.analysis || [];
-    result.architecture = result.architecture || { arc: '', slides: [] };
-    result.architecture.slides = result.architecture.slides || [];
+    result.selections = result.selections || [];
     result.gaps = result.gaps || [];
   } catch (err) {
     loadingWrap.innerHTML = '<p style="color:#C0392B;font-size:13px;">Error generating brief. Please try again.<br><small>' + err.message + '</small></p>';
@@ -779,116 +812,71 @@ async function runAgent() {
   await new Promise(r => setTimeout(r, 300));
   loadingWrap.remove();
 
-
   // Safety: log what we got
   console.log('Result keys:', Object.keys(result));
-  console.log('Analysis count:', (result.analysis||[]).length);
-  console.log('Slides count:', ((result.architecture||{}).slides||[]).length);
+  console.log('Content type:', result.contentType);
+  console.log('Selections count:', (result.selections||[]).length);
   console.log('Gaps count:', (result.gaps||[]).length);
 
-  // Auto-flag all AI content into candidate pool
   const suggestedTags = [
     audienceEl.value,
-    topicEl.value,
+    topicsEl.value,
     diseaseEl.value,
-    valuesEl.value !== 'none' ? valuesEl.value : null
+    portfolioEl.value,
+    productEl.value
   ].filter(Boolean);
 
   try {
-    (result.architecture.slides || []).forEach(function(slide) {
-      if (slide.headline_source === 'ai' && slide.headline) {
-        addToPool(slide.headline, 'headline', currentContext, suggestedTags.slice());
-      }
-      if (slide.copy) {
-        var parts = slide.copy.split('[AI]');
-        parts.forEach(function(part) {
-          var clean = part.replace(/\[CM-\d+\]/g, '').replace(/[.!?\s]+$/, '').trim();
-          var lastSentence = clean.split(/[.!?]/).filter(function(s){ return s.trim().length > 20; }).pop();
-          if (lastSentence) addToPool(lastSentence.trim(), 'copy', currentContext, suggestedTags.slice());
-        });
-      }
-    });
-  } catch(flagErr) {
-    console.warn('Pool flagging error (non-fatal):', flagErr.message);
-  }
 
-  let priorityMap;
-  try {
-  priorityMap = {
-    lead: { label: 'Lead message', cls: 'priority-lead' },
-    support: { label: 'Support', cls: 'priority-support' },
-    bridge: { label: 'Bridge', cls: 'priority-bridge' },
-    close: { label: 'Close', cls: 'priority-close' }
-  };
-
-  // Step 1: Analysis
-  const analysisBlock = document.createElement('div');
-  analysisBlock.className = 'step-block';
-  analysisBlock.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">Messaging analysis &mdash; cluster selection &amp; rationale</div></div>';
-
-  (result.analysis || []).forEach(msg => {
-    const lib = MESSAGE_LIBRARY[msg.id] || {};
-    const p = priorityMap[msg.priority] || { label: msg.priority || 'support', cls: 'priority-support' };
+  if (result.contentType === 'proof') {
+    // Proof is always the fixed bridge to the infographic — never generated,
+    // never paraphrased.
+    const proofBlock = document.createElement('div');
+    proofBlock.className = 'step-block';
+    proofBlock.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">Proof</div></div>';
+    const p = result.proof || {};
     const card = document.createElement('div');
     card.className = 'cluster-card';
     card.innerHTML =
-      '<div class="cluster-top"><div class="cluster-headline">' + (msg.headline || lib.headline || '') + '</div><div class="cluster-msg-id">' + msg.id + '</div></div>' +
-      '<div class="cluster-rationale">' + (msg.rationale || '') + '</div>' +
-      '<div class="cluster-meta"><span class="cluster-priority ' + p.cls + '">' + p.label + '</span>' +
-      (lib.tags || []).slice(0,5).map(t => '<span class="cluster-chip">' + t + '</span>').join('') + '</div>';
-    analysisBlock.appendChild(card);
-  });
-  outputContent.appendChild(analysisBlock);
+      '<div class="cluster-top"><div class="cluster-headline">' + (p.text || '') + '</div></div>' +
+      '<div class="cluster-rationale"><a href="' + (p.url || '#') + '" target="_blank" rel="noopener">' + (p.url || '') + '</a></div>';
+    proofBlock.appendChild(card);
+    outputContent.appendChild(proofBlock);
+  } else {
+    // Lead message / Support: verbatim selections only, each with its source citation.
+    const typeLabel = result.contentType === 'support' ? 'Support points' : 'Lead messages';
+    const block = document.createElement('div');
+    block.className = 'step-block';
+    block.innerHTML = '<div class="step-heading"><div class="step-num">1</div><div class="step-title">' + typeLabel + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
 
-  const d1 = document.createElement('hr'); d1.className = 'divider';
-  outputContent.appendChild(d1);
+    (result.selections || []).forEach(function(sel) {
+      const card = document.createElement('div');
+      card.className = 'cluster-card';
+      card.innerHTML =
+        '<div class="cluster-top"><div class="cluster-headline">' + (sel.text || '') + '</div><div class="cluster-msg-id">' + (sel.id || '') + '</div></div>' +
+        '<div class="cluster-meta"><span class="cluster-chip">' + (sel.source || '') + '</span></div>';
+      block.appendChild(card);
 
-  // Step 2: Architecture
-  const archBlock = document.createElement('div');
-  archBlock.className = 'step-block';
-  archBlock.innerHTML =
-    '<div class="step-heading"><div class="step-num">2</div><div class="step-title">Narrative architecture &mdash; ' + deliverableLabel + ' structure</div></div>' +
-    '<p class="arc-note">' + ((result.architecture || {}).arc || '') + '</p>';
+      addToPool(sel.text, result.contentType === 'support' ? 'support' : 'lead', currentContext, suggestedTags.slice());
+    });
 
-  ((result.architecture || {}).slides || []).forEach(slide => {
-    const srcs = (slide.sources || []).map(s => '<span class="slide-src-id">' + s + '</span>').join('');
-    const isAiHeadline = slide.headline_source === 'ai';
-    const headlineCite = isAiHeadline
-      ? '<span class="cite-ai flagged">[AI]</span>'
-      : '<span class="cite-msg">[' + (slide.sources && slide.sources[0] ? slide.sources[0] : 'CM') + ']</span>';
+    if ((result.selections || []).length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'arc-note';
+      empty.textContent = 'No verbatim match found in the library for this combination \u2014 see gap report below.';
+      block.appendChild(empty);
+    }
 
-    const formattedCopy = (slide.copy || '')
-      .replace(/\[CM-\d+\]/g, m => '<span class="cite-msg">' + m + '</span>')
-      .replace(/\[AI\]/g, '<span class="cite-ai">[AI]</span>');
+    outputContent.appendChild(block);
+  }
 
-    const el = document.createElement('div');
-    el.className = 'slide-draft';
-    el.innerHTML =
-      '<div class="slide-tab"><div class="slide-dot"></div><div class="slide-tab-label">Slide ' + slide.position + ' &mdash; ' + (slide.label || '') + '</div>' + srcs + '</div>' +
-      '<div class="slide-body">' +
-        '<div class="slide-headline-wrap"><span class="slide-headline">' + (slide.headline || '') + '</span>' + headlineCite + '</div>' +
-        '<div class="slide-copy">' + formattedCopy + '</div>' +
-        (slide.visual_note ? '<div class="slide-note">&#9658; ' + slide.visual_note + '</div>' : '') +
-      '</div>';
-    archBlock.appendChild(el);
-  });
-
-  const keyEl = document.createElement('div');
-  keyEl.className = 'cite-key';
-  keyEl.innerHTML =
-    '<strong style="color:var(--warm-dark);font-size:11px;">Citation key</strong>' +
-    '<span class="cite-key-item"><span class="cite-msg" style="margin:0;">CM-XX</span>Sourced from approved library message</span>' +
-    '<span class="cite-key-item"><span class="cite-ai flagged" style="margin:0;">[AI]</span>Agent-written — auto-flagged to library candidates</span>';
-  archBlock.appendChild(keyEl);
-  outputContent.appendChild(archBlock);
-
-  // Step 3: Gaps
+  // Gap report
   if ((result.gaps || []).length > 0) {
     const d2 = document.createElement('hr'); d2.className = 'divider';
     outputContent.appendChild(d2);
     const gapBlock = document.createElement('div');
     gapBlock.className = 'step-block';
-    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">3</div><div class="step-title">Gap report &mdash; library coverage analysis</div></div>';
+    gapBlock.innerHTML = '<div class="step-heading"><div class="step-num">2</div><div class="step-title">Gap report &mdash; library coverage</div></div>';
     result.gaps.forEach(gap => {
       const el = document.createElement('div');
       el.className = 'gap-card';
