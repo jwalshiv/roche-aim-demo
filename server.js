@@ -138,7 +138,7 @@ ABSOLUTE RULES:
 - Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
 - Select the lead entries whose buying influence and/or customer challenge tags best match the requested context. If several fit, prefer the closer match.
 - If nothing in the library reasonably matches the requested context, do not force a match \u2014 report it in "gaps" instead.
-- Return ONLY valid JSON, no markdown fences, no preamble.
+- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
 
 JSON structure:
 {
@@ -179,7 +179,7 @@ ABSOLUTE RULES:
 - You may ONLY reproduce the "Text" field of ${kindNoun} library entries, character-for-character, exactly as written. Do not paraphrase, reword, summarise, correct grammar, expand, shorten, or combine entries.
 - Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
 - Never return an entry from the LEAD LIBRARY itself in "selections" \u2014 only from the ${kindNoun} LIBRARY.
-- Return ONLY valid JSON, no markdown fences, no preamble.
+- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
 
 JSON structure:
 {
@@ -211,7 +211,7 @@ ABSOLUTE RULES:
 - Do not invent, infer, or add any claim, statistic, or sentence that is not the exact text of a library entry.
 - Select entries whose buying influence and/or customer challenge tags best match the requested context. If several fit, prefer the closer match.
 - If nothing reasonably matches, return an empty selections array rather than forcing a loosely related entry.
-- Return ONLY valid JSON, no markdown fences, no preamble.
+- Return ONLY valid JSON, no markdown fences, no preamble, no explanation of your reasoning, and no leading sentence like "I'll work through this" 2014 your entire response must be the JSON object and nothing else, starting with { and ending with }.
 
 JSON structure:
 {
@@ -323,12 +323,25 @@ const server = http.createServer((req, res) => {
         });
       }
 
+      // The model is instructed to return only JSON, but sometimes adds a
+      // conversational preamble anyway ("I'll work through this...") before
+      // the actual object. Rather than relying on prompt compliance, pull
+      // out the {...} substring directly so a stray preamble can't break parsing.
+      function extractJSON(text) {
+        const stripped = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        const start = stripped.indexOf('{');
+        const end = stripped.lastIndexOf('}');
+        if (start === -1 || end === -1 || end < start) {
+          throw new Error('No JSON object found in model response');
+        }
+        return JSON.parse(stripped.slice(start, end + 1));
+      }
+
       function runType(kind, audience) {
         audience = audience || 'external';
         return callAnthropic(buildSystemPrompt(kind, audience)).then(function(text) {
-          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
           let parsedResult;
-          try { parsedResult = JSON.parse(clean); }
+          try { parsedResult = extractJSON(text); }
           catch (e) { throw new Error('Model returned malformed JSON (' + kind + '): ' + e.message); }
           const selections = (parsedResult.selections || []).map(function(sel) {
             // Enforce verbatim: always serve the library's own text/source for the
@@ -344,9 +357,8 @@ const server = http.createServer((req, res) => {
 
       function runInternalNotes() {
         return callAnthropic(buildInternalContextPrompt()).then(function(text) {
-          const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
           let parsedResult;
-          try { parsedResult = JSON.parse(clean); }
+          try { parsedResult = extractJSON(text); }
           catch (e) { console.error('[API] internal notes malformed JSON:', e.message); return []; }
           return (parsedResult.selections || []).map(function(sel) {
             const lib = MESSAGE_LIBRARY[sel.id];
