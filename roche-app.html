@@ -518,7 +518,7 @@
 <div class="pdf-modal-overlay" id="pdfModalOverlay" onclick="if(event.target===this) closePdfViewer();">
   <div class="pdf-modal">
     <div class="pdf-modal-header">
-      <span class="pdf-modal-title" id="pdfModalTitle">Global Customer Relationship Study 2025</span>
+      <span class="pdf-modal-title" id="pdfModalTitle">Reference document</span>
       <button class="pdf-modal-close" onclick="closePdfViewer()" aria-label="Close">&times;</button>
     </div>
     <div class="pdf-modal-body" id="pdfModalBody">
@@ -742,7 +742,7 @@ async function runAgent() {
   outputContent.appendChild(headerEl);
 
   const steps = [
-    'Reading Global Customer Relationship Study 2025 library\u2026',
+    'Reading reference library\u2026',
     'Matching entries to buying influence and customer need\u2026',
     'Selecting verbatim text \u2014 no rewriting, no paraphrasing\u2026',
     'Checking citations against source slides\u2026',
@@ -859,13 +859,19 @@ async function runAgent() {
 
   try {
 
+  // Mirrors server.js's DOCS registry — used purely for citation labels/links.
+  const DOCS = {
+    crr: { file: '/docs/crr.pdf', title: 'Global Customer Relationship Study 2025', prefix: 'CRR' },
+    oid: { file: '/docs/oid.pdf', title: 'OneRoche ID Messaging Framework', prefix: 'OID' }
+  };
+
   const typeLabels = { lead: 'Lead messages', support: 'Support points', proof: 'Proof' };
   const groupOrder = result.contentType === 'all' ? ['lead', 'support', 'proof'] : [result.contentType];
 
   function renderCard(sel, container) {
-    const pageMatch = /Slide (\d+)/.exec(sel.source || '');
-    const idHtml = pageMatch
-      ? '<a class="cluster-msg-id" href="/reference-deck.pdf#page=' + pageMatch[1] + '" onclick="openPdfViewer(\'/reference-deck.pdf\', ' + pageMatch[1] + ', \'Global Customer Relationship Study 2025\'); return false;" title="' + (sel.id || '') + '">CRR-Page ' + pageMatch[1] + '</a>'
+    const docInfo = DOCS[sel.doc];
+    const idHtml = (docInfo && sel.page)
+      ? '<a class="cluster-msg-id" href="' + docInfo.file + '#page=' + sel.page + '" onclick="openPdfViewer(\'' + docInfo.file + '\', ' + sel.page + ', \'' + docInfo.title + '\'); return false;" title="' + (sel.id || '') + ' \u2014 ' + (sel.source || '') + '">' + docInfo.prefix + '-Page ' + sel.page + '</a>'
       : '<div class="cluster-msg-id">' + (sel.id || '') + '</div>';
     const card = document.createElement('div');
     card.className = 'cluster-card';
@@ -879,7 +885,7 @@ async function runAgent() {
     const groupSelections = (result.selections || []).filter(function(sel) { return (sel.type || result.contentType) === groupType; });
     const block = document.createElement('div');
     block.className = 'step-block';
-    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from Global Customer Relationship Study 2025</div></div>';
+    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from the reference library</div></div>';
 
     groupSelections.forEach(function(sel) { renderCard(sel, block); });
 
