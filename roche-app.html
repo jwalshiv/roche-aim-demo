@@ -82,6 +82,8 @@
   .step-heading { display: flex; align-items: center; gap: 12px; }
   .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-light); border: 1px solid var(--blue-mid); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--blue); flex-shrink: 0; }
   .step-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm-light); }
+  .step-toggle { margin-left: auto; background: none; border: none; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--blue); cursor: pointer; padding: 2px 6px; white-space: nowrap; }
+  .step-toggle:hover { text-decoration: underline; }
   .arc-note { font-size: 13px; color: var(--warm-light); line-height: 1.65; font-style: italic; padding-left: 36px; }
 
   /* Cluster cards */
@@ -868,6 +870,8 @@ async function runAgent() {
 
   const typeLabels = { lead: 'Lead messages', support: 'Support points', proof: 'Proof' };
   const groupOrder = result.contentType === 'all' ? ['lead', 'support', 'proof'] : [result.contentType];
+  const TOP_N = 3;
+  let toggleSeq = 0;
 
   function renderCard(sel, container) {
     const docInfo = DOCS[sel.doc];
@@ -882,13 +886,37 @@ async function runAgent() {
     addToPool(sel.text, sel.type || result.contentType, currentContext, suggestedTags.slice());
   }
 
+  window.toggleResultSection = function(toggleId) {
+    const extra = document.getElementById(toggleId);
+    const btn = document.getElementById(toggleId + '-btn');
+    const isHidden = extra.style.display === 'none';
+    extra.style.display = isHidden ? '' : 'none';
+    btn.textContent = isHidden ? 'Show top 3' : 'View all (' + btn.dataset.total + ')';
+  };
+
   groupOrder.forEach(function(groupType, i) {
     const groupSelections = (result.selections || []).filter(function(sel) { return (sel.type || result.contentType) === groupType; });
     const block = document.createElement('div');
     block.className = 'step-block';
-    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from the reference library</div></div>';
 
-    groupSelections.forEach(function(sel) { renderCard(sel, block); });
+    const toggleId = 'result-extra-' + (toggleSeq++);
+    const toggleHtml = groupSelections.length > TOP_N
+      ? '<button class="step-toggle" id="' + toggleId + '-btn" data-total="' + groupSelections.length + '" onclick="toggleResultSection(\'' + toggleId + '\')">View all (' + groupSelections.length + ')</button>'
+      : '';
+    block.innerHTML = '<div class="step-heading"><div class="step-num">' + (i + 1) + '</div><div class="step-title">' + (typeLabels[groupType] || 'Messages') + ' \u2014 verbatim from the reference library</div>' + toggleHtml + '</div>';
+
+    groupSelections.slice(0, TOP_N).forEach(function(sel) { renderCard(sel, block); });
+
+    if (groupSelections.length > TOP_N) {
+      const extraWrap = document.createElement('div');
+      extraWrap.id = toggleId;
+      extraWrap.style.display = 'none';
+      const extraInner = document.createElement('div');
+      extraInner.style.cssText = 'display:flex;flex-direction:column;gap:14px;margin-top:14px;';
+      groupSelections.slice(TOP_N).forEach(function(sel) { renderCard(sel, extraInner); });
+      extraWrap.appendChild(extraInner);
+      block.appendChild(extraWrap);
+    }
 
     if (groupSelections.length === 0) {
       const empty = document.createElement('p');
